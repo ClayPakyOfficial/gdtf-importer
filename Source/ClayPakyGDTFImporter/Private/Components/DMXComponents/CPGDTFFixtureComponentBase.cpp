@@ -1,0 +1,62 @@
+/*
+MIT License
+
+Copyright (c) 2022 Clay Paky S.P.A.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+
+#include "Components/DMXComponents/CPGDTFFixtureComponentBase.h"
+#include "Library/DMXEntityFixturePatch.h"
+
+UCPGDTFFixtureComponentBase::UCPGDTFFixtureComponentBase() {
+
+	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+	this->bIsRawDMXEnabled = false;
+}
+
+void UCPGDTFFixtureComponentBase::Setup(FName AttachedGeometryNamee) {
+
+	this->AttachedGeometryName = AttachedGeometryNamee;
+}
+
+ACPGDTFFixtureActor* UCPGDTFFixtureComponentBase::GetParentFixtureActor() {
+
+	AActor* Parent = GetOwner();
+	if (Parent)	{
+
+		ACPGDTFFixtureActor* ParentFixtureActor = Cast<ACPGDTFFixtureActor>(Parent);
+		return ParentFixtureActor;
+	} else return nullptr;
+}
+
+  /*******************************************/
+ /*               DMX Related               */
+/*******************************************/
+
+void UCPGDTFFixtureComponentBase::PushNormalizedRawValues(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedRawDMXValueMap& RawValuesMap) {
+
+	if (this->bIsRawDMXEnabled) {
+		TMap<int32, int32> RawChannelsValues;
+		FixturePatch->GetRawChannelsValues(RawChannelsValues);
+		this->PushDMXRawValues(FixturePatch, RawChannelsValues);
+	}	
+}

@@ -1,0 +1,33 @@
+{
+	"FileVersion": 1,
+	"Version": 1,
+	"VersionName": "0.0.1",
+	"FriendlyName": "GDTFImporter by Clay Paky",
+	"Description": "Import of GDTF format to interact with DMX enabled devices.",
+	"Category": "Virtual Production",
+	"CreatedBy": "Clay Paky S.P.A.",
+	"CreatedByURL": "https://www.claypaky.it/",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Modules": [
+		{
+			"Name": "ClayPakyGDTFImporter",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "DMXEngine",
+			"Enabled": true
+		},
+		{
+			"Name": "GLTFImporter",
+			"Enabled": true
+		}
+	]
+}
