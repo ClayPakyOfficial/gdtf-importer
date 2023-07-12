@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -91,11 +91,8 @@ public:
 
 	UCPGDTFAdditiveColorSourceFixtureComponent();
 
-	//void BeginPlay();
-	//void OnConstruction() override;
-
 	/// The array is present for future support of more complex LED engines
-	virtual void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables) override;
+	virtual bool Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables, int attributeIndex) override;
 
 	  /*******************************************/
 	 /*               DMX Related               */

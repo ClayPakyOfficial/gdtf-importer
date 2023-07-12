@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ SOFTWARE.
 
 /*
  * Parses a GDTF Matrix
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 24 may 2022
  *
  * @param MatrixStr String to parse into a matrix
@@ -66,7 +66,7 @@ FMatrix CPGDTFDescription::ParseMatrix(FString MatrixStr) {
 
 
 /**
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 15 june 2022
  *
  * @param Type
@@ -84,7 +84,7 @@ TArray<UCPGDTFDescriptionGeometryBase*> UCPGDTFDescriptionGeometries::GetChildre
 }
 
 /**
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 15 june 2022
  *
  * @param CurrentNode
@@ -109,7 +109,7 @@ TArray<UCPGDTFDescriptionGeometryBase*> UCPGDTFDescriptionGeometries::GetChildre
 }
 
 /**
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 15 june 2022
  *
  * @param Type
@@ -125,7 +125,7 @@ TArray<FName> UCPGDTFDescriptionGeometries::GetChildrensNamesOfType(ECPGDTFDescr
 }
 
 /**
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 15 june 2022
  *
  * @param CurrentNode

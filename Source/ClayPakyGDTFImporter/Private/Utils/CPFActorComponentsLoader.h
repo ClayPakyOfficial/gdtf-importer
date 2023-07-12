@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,7 @@ public:
 
 	/**
 	 * Setup the actor's DMXComponents using one Attribute.
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 30 june 2022
 	 *
 	 * @param Actor Actor to attach the components
@@ -49,18 +49,27 @@ public:
 
 	/**
 	 * Remove all the DMXComponents for a given actor.
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 09 september 2022
 	 *
 	 * @param Actor Actor to purge
 	 */
 	static void PurgeDMXComponents(ACPGDTFFixtureActor* Actor);
 
+	/**
+	 * Clears the dmx components, destroys the Geometry Tree and deletes all of the construction scripts related to the Actor
+	 * @author Luca Sorace - Clay Paky S.R.L.
+	 * @date 22 May 2023
+	 *
+	 * @param Actor Actor to purge
+	 */
+	static void PurgeAllComponents(ACPGDTFFixtureActor* Actor);
+
 private:
 
 	/**
 	 * Setup the actor's DMXComponents using one Attribute.
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes, Luca Sorace - Clay Paky S.R.L.
 	 * @date 30 june 2022
 	 *
 	 * @param Actor Actor to attach the components
@@ -70,7 +79,7 @@ private:
 
 	/**
 	 * Setup the actor's DMXComponents using multiple Attributes.
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes, Luca Sorace - Clay Paky S.R.L.
 	 * @date 30 june 2022
 	 *
 	 * @param Actor Actor to attach the components
@@ -83,12 +92,12 @@ private:
 	 * Find all DMXChannels referencing a given Attribute name pattern. Also remove the found channels from the given array.
 	 * In the case where we find multiple channel for a unique Attribute Type (multiple ColorAdd_R for LED Beam moving head for example)
 	 * we ensure that all the returned Chanels are linked to the same geometry
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 30 june 2022
 	 * 
 	 * @param AttributeNamePattern Regex pattern to look for specific Attributes.
 	 * @param DMXChannels Array where to look for.
 	 * @return Channels found
 	 */
-	static TArray<FDMXImportGDTFDMXChannel> FindDMXChannelsByAttributeTypePattern(FString AttributeNamePattern, TArray<FDMXImportGDTFDMXChannel>* DMXChannels);
+	static TSet<int> FindDMXChannelsIdxByAttributeTypePattern(FString AttributeNamePattern, TArray<FDMXImportGDTFDMXChannel> &DMXChannels);
 };

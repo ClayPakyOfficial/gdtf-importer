@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ SOFTWARE.
 
 /**
  * Set the properties of the pulse effect
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 21 july 2022
  *
  * @param EffectType Type of the effect
@@ -46,7 +46,7 @@ void FPulseEffectManager::SetSettings(EPulseEffectType EffectType, double Period
 
 /**
  * Change the Effect period
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 22 july 2022
  * 
  * @param Period in seconds
@@ -61,7 +61,7 @@ void FPulseEffectManager::ChangePeriod(double Period) {
 
 /**
  * Calc the value for a given time without updating the internal CurrentTime.
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 21 july 2022
  *
  * @param Time

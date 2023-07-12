@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@ SOFTWARE.
 
 #include "CoreMinimal.h"
 #include "CPGDTFDescription.h"
+#include "CPGDTFDMXChannelTree.generated.h"
 
 /**
  * Trees to optimize the DMXChannel definition during runtime
@@ -34,20 +35,18 @@ SOFTWARE.
 /**
  * Node containing FDMXImportGDTFChannelSet
  */
+USTRUCT()
 struct FDMXChannelSetTreeNode {
-
+	GENERATED_BODY()
 public:
 
-	FDMXChannelSetTreeNode* Left;
-	FDMXChannelSetTreeNode* Right;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Internal")
+	int32 Left;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Internal")
+	int32 Right;
 	
-	FCPGDTFDescriptionChannelSet* ChannelSet;
-
-	~FDMXChannelSetTreeNode() {
-		
-		if (this->Left  != nullptr) this->Left->~FDMXChannelSetTreeNode();
-		if (this->Right != nullptr) this->Right->~FDMXChannelSetTreeNode();
-	}
+	UPROPERTY()
+	FCPGDTFDescriptionChannelSet ChannelSet;
 
 	bool IsValueInRange(int32 DMXValue);
 
@@ -62,17 +61,19 @@ public:
 /**
  * Tree of FDMXImportGDTFChannelSet
  */
-class FDMXLogicalChannelTree {
+USTRUCT(Blueprinttype)
+struct FDMXLogicalChannelTree {
+	GENERATED_BODY()
 
 protected:
-	FDMXChannelSetTreeNode* Root;
+	UPROPERTY(VisibleDefaultsOnly, Category = "Internal")
+	int32 Root = -1;
 
+	UPROPERTY(VisibleDefaultsOnly, Category = "Internal")
+	TArray<FDMXChannelSetTreeNode> elements;
 public:
-	FDMXLogicalChannelTree() { this->Root = nullptr; }
 
-	~FDMXLogicalChannelTree() { if (this->Root != nullptr) this->Root->~FDMXChannelSetTreeNode(); }
-
-	bool IsEmpty() { return this->Root == nullptr; }
+	bool IsEmpty() { return elements.IsEmpty(); }
 
 	void Insert(FCPGDTFDescriptionChannelFunction Item);
 	
@@ -80,29 +81,27 @@ public:
 
 protected:
 	
-	void Insert(FCPGDTFDescriptionChannelSet* Item);
+	void Insert(FCPGDTFDescriptionChannelSet& Item);
 };
 
 
 /**
  * Node containing a FDMXImportGDTFLogicalChannel
  */
+USTRUCT()
 struct FDMXChannelTreeNode {
-
+	GENERATED_BODY()
 public:
 
-	FDMXChannelTreeNode* Left;
-	FDMXChannelTreeNode* Right;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Internal")
+	int32 Left = -1;
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Internal")
+	int32 Right = -1;
 
+	UPROPERTY()
 	FDMXLogicalChannelTree ChannelSetsTree;
-	FCPGDTFDescriptionChannelFunction* ChannelFunction;
-
-	~FDMXChannelTreeNode() {
-
-		if (this->Left  != nullptr) this->Left->~FDMXChannelTreeNode();
-		if (this->Right != nullptr) this->Right->~FDMXChannelTreeNode();
-		this->ChannelSetsTree.~FDMXLogicalChannelTree();
-	}
+	UPROPERTY()
+	FCPGDTFDescriptionChannelFunction ChannelFunction;
 
 	bool IsValueInRange(int32 DMXValue);
 
@@ -117,23 +116,23 @@ public:
 /**
  * Tree of FCPGDTFChannelFunction
  */
-class FDMXChannelTree {
+USTRUCT(BlueprintType)
+struct FDMXChannelTree {
+	GENERATED_BODY()
+private:
+	UPROPERTY(VisibleDefaultsOnly, Category = "Internal")
+	int32 Root = -1;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = "Internal")
+	TArray<FDMXChannelTreeNode> elements;
 
 public:
-	FDMXChannelTreeNode* Root;
 
-public:
-	FDMXChannelTree() { Root = nullptr; }
-
-	~FDMXChannelTree() {
-		if (this->Root != nullptr) this->Root->~FDMXChannelTreeNode();
-	}
-
-	bool IsEmpty() { return this->Root == nullptr; }
+	bool IsEmpty() { return elements.IsEmpty(); }
 
 	/**
 	 * Insert a logical Channel in the Tree
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * 
 	 * @param Item
 	 * @param NbrDMXChannels param is the number of DMXChannels used for this LogicalChannel.
@@ -145,5 +144,5 @@ public:
 
 protected:
 
-	void Insert(FCPGDTFDescriptionChannelFunction* Item);
+	void Insert(FCPGDTFDescriptionChannelFunction& Item);
 };

@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -56,21 +56,21 @@ public:
 
 	/**
 	 * Creates the Importer of GDTF Descriptions
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 04 may 2022
 	 */
 	FCPGDTFDescriptionImporter(UPackage* Package, FName AssetName, EObjectFlags Flags, FString GDTFPath);
 
 	/**
 	 * Import the GDTF Description from a GDTF file
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 04 may 2022
 	 */
 	UCPGDTFDescription* Import();
 
 	/**
 	 * Import the GDTF Thumbnail from a GDTF file
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 05 may 2022
 	 *
 	 * @param XMLDescription XMLFile to find the name of the png file on the GDTF archive
@@ -79,7 +79,7 @@ public:
 
 	/**
 	 * Get the XML Description representing the Fixture
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 06 may 2022
 	 */
 	const FXmlFile* GetXML();
@@ -88,21 +88,21 @@ private:
 
 	/**
 	 * Parse the XML file and create the GDTF Description
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 04 may 2022
 	 */
 	UCPGDTFDescription* ParseXML();
 
 	/**
 	 * Parse an XML geometry node and all his childrens recursively
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 14 june 2022 
 	*/
 	UCPGDTFDescriptionGeometryBase* ParseGeometriesNode(UCPGDTFDescription* DescriptionRoot, const FXmlNode* GeometryNode);
 
 	/**
 	 * Extract and read description.xml inside GDTF archive.
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 04 may 2022
 	 *
 	 * @return May be null if it was unable to read the XML file

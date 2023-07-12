@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@ SOFTWARE.
 
 
 #include "CPGDTFFixtureActor.h"
+#include "Factories/CPGDTFFactory.h"
 #include "ClayPakyGDTFImporterLog.h"
 #include "Utils/CPGDTFColorWizard.h"
 #include "Utils/CPGDTFImporterUtils.h"
@@ -37,10 +38,12 @@ SOFTWARE.
 #include "Components/DMXComponents/MultipleAttributes/CPGDTFColorWheelFixtureComponent.h"
 
 #include "Library/DMXEntityFixturePatch.h"
+#include "Kismet2/KismetEditorUtilities.h"
+#include "Kismet2/KismetReinstanceUtilities.h"
+#include "AssetRegistryModule.h"
 
-/*#include "DMXProtocolTypes.h"
-#include "MVR/DMXMVRFixtureActorInterface.h"*/
-
+#include "Engine/Blueprint.h"
+#include "Engine/SimpleConstructionScript.h"
 
 ACPGDTFFixtureActor::ACPGDTFFixtureActor() {
 
@@ -54,8 +57,7 @@ ACPGDTFFixtureActor::ACPGDTFFixtureActor() {
 
 	this->DMX = CreateDefaultSubobject<UDMXComponent>(TEXT("DMX Input"));
 	
-	/// TODO \todo ChangeFixtureMode disabled keep the actor stable. Finish the Blueprint update and enable it again.
-	//this->DMX->OnFixturePatchChanged.AddUObject(this, &ACPGDTFFixtureActor::ChangeFixtureMode); // Catch mode changes from DMXLibrary
+	this->DMX->OnFixturePatchChanged.AddUObject(this, &ACPGDTFFixtureActor::ChangeFixtureMode); // Catch mode changes from DMXLibrary
 }
 
 // Called during Actor spawn to a specific world
@@ -72,6 +74,7 @@ void ACPGDTFFixtureActor::OnConstruction(const FTransform& Transform) {
 		}
 		// Initialize DMX fixture components
 		for (UCPGDTFFixtureComponentBase* DMXComponent : TInlineComponentArray<UCPGDTFFixtureComponentBase*>(this)) {
+			auto aa = DMXComponent->GetParentFixtureActor();
 			DMXComponent->OnConstruction();
 		}
 	}
@@ -109,7 +112,6 @@ void ACPGDTFFixtureActor::EndPlay(const EEndPlayReason::Type EndPlayReason) {
 }
 
 void ACPGDTFFixtureActor::Tick(float DeltaTime) {
-	//TODO LS: Why is it calling DMXComponents.Remove(ColorSource); ?
 
 	Super::Tick(DeltaTime);
 	this->ToggleLightVisibility();
@@ -146,9 +148,8 @@ void ACPGDTFFixtureActor::Tick(float DeltaTime) {
 				if (ColorSource->bUseInterpolation) ColorSource->InterpolateComponent(DeltaTime);
 				UCPGDTFColorWheelFixtureComponent* ColorWheelPtr = Cast<UCPGDTFColorWheelFixtureComponent>(ColorSource);
 
-				if (ColorWheelPtr && ColorWheelPtr->IsMacroColor()) { //LS: CHECK: is this an optimization?
+				if (ColorWheelPtr && ColorWheelPtr->IsMacroColor()) {
 					FinalColor = ColorWheelPtr->ApplyFilter(FLinearColor(1, 1, 1)); // If this is a macro color we overwrite everything and exit the loop
-					//TODO LS: Are we sure this is correct? Maybe it will give problems with multiple wheels/flags
 					bIsMacroPresent = true;
 					break;
 				}
@@ -184,25 +185,32 @@ void ACPGDTFFixtureActor::Tick(float DeltaTime) {
 /**
  * Setup the actor for a specific GDTFDescription.
  * Used during the generation of the Asset by the GDTFFactory.
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 25 may 2022
  *
  * @param FixtureGDTFDescription GDTF Description of the Fixture
  * @param FixturePackagePath Path of the package (folder) containing the fixture assets. For example: "/Game/ClayPaky_MiniB"
  */
-void ACPGDTFFixtureActor::PreConstruct(UCPGDTFDescription* FixtureGDTFDescription, FString FixturePackagePath) {
-
+void ACPGDTFFixtureActor::PreConstruct(UCPGDTFDescription* FixtureGDTFDescription) {
 	this->GDTFDescription = FixtureGDTFDescription;
-	this->FixturePathInContentBrowser = FixturePackagePath;
-
-	// By default we setup the first DMX mode
-	this->CurrentModeIndex = 0;
 	
-	// Construction of the Geometries tree
-	this->GeometryTree.CreateGeometryTree(this, FixturePackagePath);
-
 	// Add of DMX components
 	FCPFActorComponentsLoader::LoadDMXComponents(this, FixtureGDTFDescription->GetDMXModes()->DMXModes[this->CurrentModeIndex]);
+
+	// Construction of the Geometries tree
+	this->GeometryTree.CreateGeometryTree(this, FixturePathInContentBrowser);
+}
+
+void ACPGDTFFixtureActor::CreateRenderingPipelines(UCPGDTFDescription* FixtureGDTFDescription) {
+	auto modes = FixtureGDTFDescription->GetDMXModes()->DMXModes;
+	FCPFActorComponentsLoader::PurgeAllComponents(this);
+	for (int modeId = 0; modeId < modes.Num(); modeId++) {
+		this->CurrentModeIndex = modeId;
+		FCPFActorComponentsLoader::LoadDMXComponents(this, FixtureGDTFDescription->GetDMXModes()->DMXModes[this->CurrentModeIndex]);
+		CPGDTFRenderPipelineBuilder pipelineBuilder = CPGDTFRenderPipelineBuilder(FixtureGDTFDescription, this->CurrentModeIndex, GetInstanceComponents(), FixturePathInContentBrowser);
+		pipelineBuilder.buildLightRenderPipeline();
+		FCPFActorComponentsLoader::PurgeAllComponents(this);
+	}
 }
 
 void ACPGDTFFixtureActor::UpdateProperties() {
@@ -218,8 +226,8 @@ void ACPGDTFFixtureActor::UpdateProperties() {
 	}
 
 	if (QualityLevel == ECPGDTFFixtureQualityLevel::Custom) {
-		MinQuality = FMath::Clamp(MinQuality, 0.2f, 4.0f);
-		MaxQuality = FMath::Clamp(MaxQuality, 0.2f, 4.0f);
+		MinQuality = FMath::Clamp(MinQuality, 0.1f, 4.0f);
+		MaxQuality = FMath::Clamp(MaxQuality, 0.1f, 4.0f);
 		QualityFallback = MaxQuality;
 	}
 
@@ -264,10 +272,24 @@ void ACPGDTFFixtureActor::SetPointlightIntensityScale(float NewPointlightIntensi
 	}
 }
 
-void ACPGDTFFixtureActor::SetSpotlightIntensityScale(float NewSpotlightIntensityScale) {
+void ACPGDTFFixtureActor::SetSpotlightLightIntensityScale(float NewSpotlightIntensityScale) {
 
 	for (const TPair<FName, UCPGDTFBeamSceneComponent*> pair : this->GeometryTree.BeamComponents) {
-		pair.Value->SetSpotlightIntensityScale(NewSpotlightIntensityScale);
+		pair.Value->SetSpotlightLightIntensityScale(NewSpotlightIntensityScale);
+	}
+}
+
+void ACPGDTFFixtureActor::SetSpotlightBeamIntensityScale(float NewSpotlightIntensityScale) {
+
+	for (const TPair<FName, UCPGDTFBeamSceneComponent*> pair : this->GeometryTree.BeamComponents) {
+		pair.Value->SetSpotlightBeamIntensityScale(NewSpotlightIntensityScale);
+	}
+}
+
+void ACPGDTFFixtureActor::SetSpotlightLensIntensityScale(float NewSpotlightIntensityScale) {
+
+	for (const TPair<FName, UCPGDTFBeamSceneComponent*> pair : this->GeometryTree.BeamComponents) {
+		pair.Value->SetSpotlightLensIntensityScale(NewSpotlightIntensityScale);
 	}
 }
 
@@ -288,6 +310,7 @@ void ACPGDTFFixtureActor::SetLightDistanceMax(float NewLightDistanceMax) {
 void ACPGDTFFixtureActor::PushNormalizedRawValues(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedRawDMXValueMap& RawValuesMap) {
 	
 	if (this->HasActorBegunPlay()) {
+		auto asd = TInlineComponentArray<UCPGDTFFixtureComponentBase*>(this);
 		for (UCPGDTFFixtureComponentBase* DMXComponent : TInlineComponentArray<UCPGDTFFixtureComponentBase*>(this)) {
 			DMXComponent->PushNormalizedRawValues(FixturePatch, RawValuesMap);
 		}
@@ -296,9 +319,6 @@ void ACPGDTFFixtureActor::PushNormalizedRawValues(UDMXEntityFixturePatch* Fixtur
 
 #if WITH_EDITOR
 void ACPGDTFFixtureActor::ChangeFixtureMode(const UDMXEntityFixturePatch* FixturePatch) {
-
-	/// TODO \todo Fix this method. Works but don't save the changes on disk.
-
 	if (FixturePatch->GetActiveModeIndex() == this->CurrentModeIndex) return; // If the mode didn't changed we return
 
 	if (FixturePatch->GetActiveModeIndex() < 0 || FixturePatch->GetActiveModeIndex() > this->GDTFDescription->GetDMXModes()->DMXModes.Num() - 1) {
@@ -308,18 +328,45 @@ void ACPGDTFFixtureActor::ChangeFixtureMode(const UDMXEntityFixturePatch* Fixtur
 
 	this->CurrentModeIndex = FixturePatch->GetActiveModeIndex();
 
-	// Step 1: Purge DMX Components
-	FCPFActorComponentsLoader::PurgeDMXComponents(this);
+	//Unloading all components and geometries and reloading them with the correct dmx mode won't work, since we cannot update the ConstructionScripts once the blueprint has been created.
+	//The current method works by firstly creating a blueprint class for each mode when we firstly import a light, then replacing the current object's blueprint with the selected mode each time we change it.
+	//This works with a lot of magic, please don't break it.
+	//For any questions, ask Luca Sorace.
 
-	// Step 2: Purge Geometries tree
-	this->GeometryTree.DestroyGeometryTree();
+	//Load the class of the correct mode
+	FString newClassName = getClassNameFromMode(UCPGDTFFactory::generateModeName(this->CurrentModeIndex));
+	UBlueprint* targetBp = Cast<UBlueprint>(FCPGDTFImporterUtils::IsAssetExisting(newClassName, ActorsPathInContentBrowser));
 
-	// Step 3: Reconstruct the new Geometries tree
-	this->GeometryTree.CreateGeometryTree(this, this->FixturePathInContentBrowser, this->CurrentModeIndex);
+	//Obtain the current blueprint
+	UClass* cls = GetClass();
+	UBlueprintGeneratedClass* bpClass = Cast<UBlueprintGeneratedClass>(cls);
+	UObject* generatedBy = bpClass->ClassGeneratedBy;
+	UBlueprint* currentBp = Cast<UBlueprint>(generatedBy);
 
-	// Step 4: Add the new DMX components
-	FCPFActorComponentsLoader::LoadDMXComponents(this, this->GDTFDescription->GetDMXModes()->DMXModes[this->CurrentModeIndex]);
+	//Obtain a list of ALL object using the previous BluePrint, and remove the current object from the said list.
+	// This will be the list of exclusion used in the next step.
+	TArray<UObject*> classes;
+	GetObjectsOfClass(currentBp->GeneratedClass, classes, true);
+	TSet<UObject*> excludedInstances = TSet<UObject*>(classes);
+	excludedInstances.Remove(this);
 
-	this->GetPackage()->SetDirtyFlag(true);
+	//Replace the blueprint of the current object with the one of the selected mode
+	FReplaceInstancesOfClassParameters params(currentBp->GeneratedClass, targetBp->GeneratedClass);
+	params.InstancesThatShouldUseOldClass = &excludedInstances;
+	params.ObjectsThatShouldUseOldStuff = &excludedInstances;
+	FBlueprintCompileReinstancer::ReplaceInstancesOfClassEx(params);
+	currentBp->GeneratedClass->ClassFlags &= ~EClassFlags::CLASS_NewerVersionExists; //Needed to prevent segfaults
 }
 #endif
+
+FString ACPGDTFFixtureActor::getClassNameFromMode(FString modeName) {
+	UClass* cls = GetClass();
+	UBlueprintGeneratedClass* bpClass = Cast<UBlueprintGeneratedClass>(cls);
+	UObject* generatedBy = bpClass->ClassGeneratedBy;
+	FString currentName = generatedBy->GetName();
+	if (currentName.EndsWith(this->CurrentModeName)) //Legacy/old actors support
+		currentName = currentName.Left(currentName.Len() - this->CurrentModeName.Len());
+	else
+		currentName += "_";
+	return currentName + modeName;
+}

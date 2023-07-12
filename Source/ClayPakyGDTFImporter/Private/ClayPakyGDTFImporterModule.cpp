@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -34,8 +34,6 @@ SOFTWARE.
 #include "ClayPakyGDTFImporterLog.h"
 
 void FClayPakyGDTFImporterModule::StartupModule() {
-
-	UE_LOG_CPGDTFIMPORTER(Warning, TEXT("!!!!!!!!!!!!!!!!!!! Luca Sorace test 420"), "69 xd");
 
 	// Registering of the DMXGDTFDescriptions thumbnails
 	UThumbnailManager::Get().RegisterCustomRenderer(UCPGDTFDescription::StaticClass(), UCPGDTFDescriptionThumbnailRenderer::StaticClass());

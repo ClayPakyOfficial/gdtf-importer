@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,30 +25,13 @@ SOFTWARE.
 #pragma once
 
 #include "CoreMinimal.h"
-#include "CPGDTFMultipleAttributeBeamFixtureComponent.h"
+#include "CPGDTFMultipleAttributeFixtureComponent.h"
 #include "CPGDTFColorCorrectionFixtureComponent.generated.h"
 
 /// Abstract Object who regroup all the color corrections DMXComponents
 /// \ingroup DMXComp
 /// TODO \todo implement CTC, CTB  and Tint components
 UCLASS(Abstract)
-class UCPGDTFColorCorrectionFixtureComponent : public UCPGDTFMultipleAttributeBeamFixtureComponent {
-
+class UCPGDTFColorCorrectionFixtureComponent : public UCPGDTFMultipleAttributeFixtureComponent {
 	GENERATED_BODY()
-
-protected:
-
-	FDMXChannelTree DMXChannelTree;
-
-	UPROPERTY()
-	FDMXImportGDTFDMXChannel GDTFDMXChannelDescription;
-
-public:
-	
-	  /*******************************************/
- 	 /*               DMX Related               */
-	/*******************************************/
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0", ClampMax = "512"), Category = "DMX Channels")
-		int32 ChannelAddress;
 };

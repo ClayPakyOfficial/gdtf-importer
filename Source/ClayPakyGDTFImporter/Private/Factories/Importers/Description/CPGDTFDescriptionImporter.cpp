@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -36,9 +36,11 @@ SOFTWARE.
 #include "XmlFile.h"
 #include "CPGDTFDescriptionImporter.h"
 
+#define PHYSICAL_CHANNEL_SET_PLACEHOLDER -694316420.0f
+
 /**
  * Creates the Importer of GDTF Descriptions
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 04 may 2022
  */
 FCPGDTFDescriptionImporter::FCPGDTFDescriptionImporter(UPackage* Package, FName AssetName, EObjectFlags Flags, FString GDTFPath) {
@@ -53,7 +55,7 @@ FCPGDTFDescriptionImporter::FCPGDTFDescriptionImporter(UPackage* Package, FName 
 
 /**
  * Import the GDTF Description from a GDTF file
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 04 may 2022
  */
 UCPGDTFDescription* FCPGDTFDescriptionImporter::Import() {
@@ -71,7 +73,7 @@ UCPGDTFDescription* FCPGDTFDescriptionImporter::Import() {
 
 /**
  * Import the GDTF Thumbnail from a GDTF file
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 05 may 2022
  * 
  * @param XMLDescription XMLFile to find the name of the png file on the GDTF archive
@@ -107,7 +109,7 @@ UTexture2D* FCPGDTFDescriptionImporter::ImportThumbnail(UCPGDTFDescription* XMLD
 
 /**
  * Get the XML Description representing the Fixture
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 06 may 2022
  */
 const FXmlFile* FCPGDTFDescriptionImporter::GetXML() {
@@ -117,7 +119,7 @@ const FXmlFile* FCPGDTFDescriptionImporter::GetXML() {
 
 /**
  * Parse the XML file and create the Asset
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 04 may 2022
  */
 UCPGDTFDescription* FCPGDTFDescriptionImporter::ParseXML() {
@@ -334,7 +336,7 @@ UCPGDTFDescription* FCPGDTFDescriptionImporter::ParseXML() {
 					{
 						for (const FXmlNode* DMXChannelNode : ChannelsNode->GetChildrenNodes())
 						{
-							FDMXImportGDTFDMXChannel ImportDMXChannel;
+							FCPDMXImportGDTFDMXChannel ImportDMXChannel;
 
 							// Ignore Channels that do not specify a valid offset.
 							// E.g. 'Robe Lighting s.r.o.@Robin 800X LEDWash.gdtf' specifies virtual Dimmer channels that have no offset and cannot be accessed.
@@ -343,13 +345,12 @@ UCPGDTFDescription* FCPGDTFDescriptionImporter::ParseXML() {
 								continue;
 							}
 
-							ImportDMXChannel.Default = FDMXImportGDTFDMXValue(DMXChannelNode->GetAttribute("Default").TrimStartAndEnd());
 							ImportDMXChannel.Highlight = FDMXImportGDTFDMXValue (DMXChannelNode->GetAttribute("Highlight").TrimStartAndEnd());
 							ImportDMXChannel.Geometry = FName(*DMXChannelNode->GetAttribute("Geometry").TrimStartAndEnd());
 							LexTryParseString(ImportDMXChannel.DMXBreak, *DMXChannelNode->GetAttribute("DMXBreak").TrimStartAndEnd());
 
 							for (const FXmlNode* LogicalChannelNode : DMXChannelNode->GetChildrenNodes()) {
-								FDMXImportGDTFLogicalChannel ImportLogicalChannel;
+								FCPDMXImportGDTFLogicalChannel ImportLogicalChannel;
 
 								GDTFAttributeDefinitions->FindAtributeByName(*LogicalChannelNode->GetAttribute("Attribute").TrimStartAndEnd(), ImportLogicalChannel.Attribute);
 								ImportLogicalChannel.Snap = CPGDTFDescription::GetEnumValueFromString<EDMXImportGDTFSnap>(LogicalChannelNode->GetAttribute("Snap").TrimStartAndEnd());
@@ -360,17 +361,19 @@ UCPGDTFDescription* FCPGDTFDescriptionImporter::ParseXML() {
 
 								for (const FXmlNode* ChannelFunctionNode : LogicalChannelNode->GetChildrenNodes()) {
 
-									FDMXImportGDTFChannelFunction ImportChannelFunction;
+									FCPDMXImportGDTFChannelFunction ImportChannelFunction;
 									ImportChannelFunction.Name = FName(*ChannelFunctionNode->GetAttribute("Name").TrimStartAndEnd());
 									GDTFAttributeDefinitions->FindAtributeByName(*ChannelFunctionNode->GetAttribute("Attribute").TrimStartAndEnd(), ImportChannelFunction.Attribute);
 									ImportChannelFunction.OriginalAttribute = *ChannelFunctionNode->GetAttribute("OriginalAttribute").TrimStartAndEnd();
 									ImportChannelFunction.DMXFrom = FDMXImportGDTFDMXValue(ChannelFunctionNode->GetAttribute("DMXFrom").TrimStartAndEnd());
 									ImportChannelFunction.DMXValue = FDMXImportGDTFDMXValue(ChannelFunctionNode->GetAttribute("DMXValue").TrimStartAndEnd());
+									ImportChannelFunction.Default = FDMXImportGDTFDMXValue(ChannelFunctionNode->GetAttribute("Default").TrimStartAndEnd());
 
 									LexTryParseString(ImportChannelFunction.PhysicalFrom, *ChannelFunctionNode->GetAttribute("PhysicalFrom").TrimStartAndEnd());
 									if (ChannelFunctionNode->GetAttribute("PhysicalTo").TrimStartAndEnd().IsEmpty()) ImportChannelFunction.PhysicalTo = 1.0f;
 									else LexTryParseString(ImportChannelFunction.PhysicalTo, *ChannelFunctionNode->GetAttribute("PhysicalTo").TrimStartAndEnd());
 									LexTryParseString(ImportChannelFunction.RealFade, *ChannelFunctionNode->GetAttribute("RealFade").TrimStartAndEnd());
+									LexTryParseString(ImportChannelFunction.RealAcceleration, *ChannelFunctionNode->GetAttribute("RealAcceleration").TrimStartAndEnd());
 
 									GDTFWheels->FindWeelByName(*ChannelFunctionNode->GetAttribute("Wheel").TrimStartAndEnd(), ImportChannelFunction.Wheel);
 									GDTFPhysicalDescriptions->FindEmitterByName(*ChannelFunctionNode->GetAttribute("Emitter").TrimStartAndEnd(), ImportChannelFunction.Emitter);
@@ -385,18 +388,57 @@ UCPGDTFDescription* FCPGDTFDescriptionImporter::ParseXML() {
 
 										ImportChannelSet.Name = *ChannelSetNode->GetAttribute("Name").TrimStartAndEnd();
 										ImportChannelSet.DMXFrom = FDMXImportGDTFDMXValue(ChannelSetNode->GetAttribute("DMXFrom").TrimStartAndEnd());
-										LexTryParseString(ImportChannelSet.PhysicalFrom, *ChannelSetNode->GetAttribute("PhysicalFrom").TrimStartAndEnd());
-										if (ChannelSetNode->GetAttribute("PhysicalTo").TrimStartAndEnd().IsEmpty()) ImportChannelSet.PhysicalTo = 1.0f;
-										else LexTryParseString(ImportChannelSet.PhysicalTo, *ChannelSetNode->GetAttribute("PhysicalTo").TrimStartAndEnd());
 										if (LexTryParseString(ImportChannelSet.WheelSlotIndex, *ChannelSetNode->GetAttribute("WheelSlotIndex").TrimStartAndEnd()))
 											ImportChannelSet.WheelSlotIndex--; // The starting index is 1 in GDTF Spec
+
+										if (ChannelSetNode->GetAttribute("PhysicalFrom").TrimStartAndEnd().IsEmpty()) {
+											ImportChannelSet.PhysicalFrom = PHYSICAL_CHANNEL_SET_PLACEHOLDER;
+										} else LexTryParseString(ImportChannelSet.PhysicalFrom, *ChannelSetNode->GetAttribute("PhysicalFrom").TrimStartAndEnd());
+
+ 										if (ChannelSetNode->GetAttribute("PhysicalTo").TrimStartAndEnd().IsEmpty()) {
+											ImportChannelSet.PhysicalTo = PHYSICAL_CHANNEL_SET_PLACEHOLDER;
+										} else LexTryParseString(ImportChannelSet.PhysicalTo, *ChannelSetNode->GetAttribute("PhysicalTo").TrimStartAndEnd());
 
 										ImportChannelFunction.ChannelSets.Add(ImportChannelSet);
 									}
 									ImportLogicalChannel.ChannelFunctions.Add(ImportChannelFunction);
 								}
+
+								//Fix the channelset physical from/to
+								int lastDmx = (1 << 8 * ImportDMXChannel.Offset.Num()) - 1;
+								for (int cfIdx = ImportLogicalChannel.ChannelFunctions.Num() - 1; cfIdx >= 0; cfIdx--) {
+									FDMXImportGDTFChannelFunction* cf = &ImportLogicalChannel.ChannelFunctions[cfIdx];
+									float physicalDiff = cf->PhysicalTo - cf->PhysicalFrom;
+									int endAddress = lastDmx, startAddress = cf->DMXFrom.Value;
+									int addrDiff = endAddress - startAddress;
+
+									for (int csIdx = cf->ChannelSets.Num() - 1; csIdx >= 0; csIdx--) {
+										FDMXImportGDTFChannelSet* cs = &cf->ChannelSets[csIdx];
+										FDMXImportGDTFChannelSet* csPrev = csIdx > 0 ? &cf->ChannelSets[csIdx - 1] : nullptr;;
+										int currentAddress = cs->DMXFrom.Value;
+										lastDmx = currentAddress - 1;
+
+										//actual fix
+										//current->from
+										if (cs->PhysicalFrom == PHYSICAL_CHANNEL_SET_PLACEHOLDER)
+											cs->PhysicalFrom = (physicalDiff * ((float)(currentAddress - startAddress)) / addrDiff) + cf->PhysicalFrom; //phys : diffPhys = dmx : diffDmx
+										//prev->to
+										if (csPrev != nullptr && csPrev->PhysicalTo == PHYSICAL_CHANNEL_SET_PLACEHOLDER)
+											csPrev->PhysicalTo = cs->PhysicalFrom;
+										//current->to. If it hasn't already fixed, it means we're the first channelset, so our to-value should be obtained from the channel function
+										if (cs->PhysicalTo == PHYSICAL_CHANNEL_SET_PLACEHOLDER)
+											cs->PhysicalTo = cf->PhysicalTo;
+									}
+								}
+
 								ImportDMXChannel.LogicalChannels.Add(ImportLogicalChannel);
 							}
+							
+							//Set the default dmxchannel value
+							FString initialFunction = DMXChannelNode->GetAttribute("InitialFunction").TrimStartAndEnd();
+							if (!initialFunction.IsEmpty())
+								ImportDMXChannel.Default = ImportDMXChannel.getChannelFunctionByName(initialFunction)->Default;
+
 							DMXGDTFDescriptionDMXMode.DMXChannels.Add(ImportDMXChannel);
 						}
 					}
@@ -444,7 +486,7 @@ UCPGDTFDescription* FCPGDTFDescriptionImporter::ParseXML() {
 
 /**
  * Extract and read description.xml inside GDTF archive.
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 04 may 2022
  *
  * @return May be null if it was unable to read the XML file
@@ -504,7 +546,7 @@ FString FCPGDTFDescriptionImporter::FindAttributeEvenIfDMXSubstringIsMissing(con
 
 /**
  * Parse an XML geometry node and all his childrens recursively
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 14 june 2022
 */
 UCPGDTFDescriptionGeometryBase* FCPGDTFDescriptionImporter::ParseGeometriesNode(UCPGDTFDescription* DescriptionRoot, const FXmlNode* GeometryNode) {
@@ -597,3 +639,5 @@ UCPGDTFDescriptionGeometryBase* FCPGDTFDescriptionImporter::ParseGeometriesNode(
 	// Return to parent
 	return Geometry;
 }
+
+#undef PHYSICAL_CHANNEL_SET_PLACEHOLDER

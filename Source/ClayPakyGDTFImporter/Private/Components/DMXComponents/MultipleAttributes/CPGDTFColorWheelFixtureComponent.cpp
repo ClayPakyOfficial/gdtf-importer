@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+//#define ENABLE_OLD_RENDER
 
 #include "Components/DMXComponents/MultipleAttributes/CPGDTFColorWheelFixtureComponent.h"
 #include "Factories/Importers/Wheels/CPGDTFWheelImporter.h"
@@ -29,236 +30,224 @@ SOFTWARE.
 #include "Kismet/KismetMathLibrary.h"
 #include "PackageTools.h"
 
-void UCPGDTFColorWheelFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels) {
-
-	Super::Setup(AttachedGeometryNamee, DMXChannels);
-	if (DMXChannels[0].Offset.Num() > 0) this->ChannelAddress = DMXChannels[0].Offset[0];
-	else this->ChannelAddress = -1;
-	this->GDTFDMXChannelDescription = DMXChannels[0];
-	this->DMXChannelTree.Insert(this->GDTFDMXChannelDescription.LogicalChannels[0], this->GDTFDMXChannelDescription.Offset.Num());
-
-	FDMXImportGDTFWheel Wheel = this->GDTFDMXChannelDescription.LogicalChannels[0].ChannelFunctions[0].Wheel;
+bool UCPGDTFColorWheelFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
+	Super::Setup(AttachedGeometryNamee, DMXChannels, attributeIndex);
+	FDMXImportGDTFWheel Wheel;
+	findWheelObject(Wheel);
 	this->WheelColors = FCPGDTFWheelImporter::GenerateColorArray(Wheel);
 	
-	FString TextureLoadPath = this->GetParentFixtureActor()->GDTFDescription->GetFixtureSavePath();
+	FString TextureLoadPath = this->GetParentFixtureActor()->FixturePathInContentBrowser;
+	FString TextureLoadPathFrosted = TextureLoadPath;
 	FString SanitizedWheelName = UPackageTools::SanitizePackageName(Wheel.Name.ToString());
-	TextureLoadPath.Append("textures/" + SanitizedWheelName + "/Wheel_" + SanitizedWheelName + ".Wheel_" + SanitizedWheelName);
+	TextureLoadPath.Append("/textures/" + SanitizedWheelName + "/Wheel_" + SanitizedWheelName + ".Wheel_" + SanitizedWheelName);
+	TextureLoadPathFrosted.Append("/textures/" + SanitizedWheelName + "/Wheel_" + SanitizedWheelName + "_Frosted.Wheel_" + SanitizedWheelName + "_Frosted");
 	this->WheelTexture = Cast<UTexture2D>(FCPGDTFImporterUtils::LoadObjectByPath(TextureLoadPath));
-	
-	this->InterpolationScale = 0.25f;
-	this->bIsRawDMXEnabled = true;
+	this->WheelTextureFrosted = Cast<UTexture2D>(FCPGDTFImporterUtils::LoadObjectByPath(TextureLoadPathFrosted));
 	this->bUseInterpolation = true;
+	this->bIsRawDMXEnabled = true;
+
+	return true;
 }
 
 void UCPGDTFColorWheelFixtureComponent::BeginPlay() {
+	this->mIndexParamName = *CPGDTFRenderPipelineBuilder::getIndexParamName(FCPGDTFWheelImporter::WheelType::Color, this->mAttributeIndexNo);
+	FCPDMXChannelData wheelData = *this->attributesData.getChannelData(ECPGDTFAttributeType::Color_n_WheelIndex);
+	fixMissingAccelFadeValues(wheelData, 0);
+	Super::BeginPlay(1, wheelData.interpolationFade, wheelData.interpolationAcceleration, this->WheelColors.Num(), 0);
+	this->interpolations[0].bSpeedCapEnabled = false;
 
-	Super::BeginPlay();
 	for (UCPGDTFBeamSceneComponent* Beam : this->AttachedBeams) {
 
 		if (!Beam->HasBegunPlay()) Beam->BeginPlay(); // To avoid a skip of color disk
 
-		if (Beam->DynamicMaterialBeam) {
-			Beam->DynamicMaterialBeam->SetTextureParameterValue("DMX Color Disk", this->WheelTexture);
-			Beam->DynamicMaterialBeam->SetScalarParameterValue("DMX Color Wheel Num Mask", this->WheelColors.Num());
-		}
-		if (Beam->DynamicMaterialLens) {
-			Beam->DynamicMaterialLens->SetTextureParameterValue("DMX Color Disk", this->WheelTexture);
-			Beam->DynamicMaterialLens->SetScalarParameterValue("DMX Color Wheel Num Mask", this->WheelColors.Num());
-		}
+		FName diskName = *CPGDTFRenderPipelineBuilder::getDiskParamName(FCPGDTFWheelImporter::WheelType::Color, false, this->mAttributeIndexNo);
+		FName diskFrostedName = *CPGDTFRenderPipelineBuilder::getDiskParamName(FCPGDTFWheelImporter::WheelType::Color, true, this->mAttributeIndexNo);
+		FName numSlot = *CPGDTFRenderPipelineBuilder::getNumSlotsParamName(FCPGDTFWheelImporter::WheelType::Color, this->mAttributeIndexNo);
+
+		setAllTextureParameters(Beam, diskName, this->WheelTexture);
+		setAllTextureParameters(Beam, diskFrostedName, this->WheelTextureFrosted);
+		setAllScalarParameters(Beam, numSlot, this->WheelColors.Num());
+		#ifdef ENABLE_OLD_RENDER
+			setAllTextureParameters(Beam, "DMX Color Disk", this->WheelTexture);
+			setAllScalarParameters(Beam, "DMX Color Wheel Num Mask", this->WheelColors.Num());
+		#endif
 	}
 
-	this->CurrentWheelIndex = FChannelInterpolation();
-	this->CurrentWheelIndex.InterpolationScale = this->InterpolationScale;
-	this->CurrentWheelIndex.RangeSize = this->WheelColors.Num();
-	this->CurrentWheelIndex.CurrentValue = 0;
-	this->CurrentWheelIndex.TargetValue = 0;
-	this->CurrentWheelIndex.StartTravel(0);
-
-
-	if (this->DMXChannelTree.IsEmpty()) this->DMXChannelTree.Insert(this->GDTFDMXChannelDescription.LogicalChannels[0], this->GDTFDMXChannelDescription.Offset.Num());
+	this->CurrentColor = FLinearColor(0, 0, 0);
+	this->bUseInterpolation = true;
 	this->bIsRawDMXEnabled = true; // Just to make sure
 	this->bIsMacroColor = false;
-	this->bUseInterpolation = true;
-	this->CurrentColor = FLinearColor(0, 0, 0);
 }
 
-void UCPGDTFColorWheelFixtureComponent::PushDMXRawValues(UDMXEntityFixturePatch* FixturePatch, const TMap<int32, int32>& RawValuesMap) {
+TArray<TSet<ECPGDTFAttributeType>> UCPGDTFColorWheelFixtureComponent::getAttributeGroups() {
+	TArray<TSet<ECPGDTFAttributeType>> attributes;
 
-	const int32* DMXValuePtr = RawValuesMap.Find(this->ChannelAddress);
-	if (DMXValuePtr) this->ApplyEffectToBeam(*DMXValuePtr);
+	TSet<ECPGDTFAttributeType> colorIndex;
+	colorIndex.Add(ECPGDTFAttributeType::Color_n_);
+	colorIndex.Add(ECPGDTFAttributeType::Color_n_WheelIndex);
+	attributes.Add(colorIndex);
+
+	TSet<ECPGDTFAttributeType> colorMacro;
+	colorMacro.Add(ECPGDTFAttributeType::ColorMacro_n_);
+	attributes.Add(colorMacro);
+	
+	TSet<ECPGDTFAttributeType> colorSpin;
+	colorSpin.Add(ECPGDTFAttributeType::Color_n_WheelSpin);
+	attributes.Add(colorSpin);
+	
+	TSet<ECPGDTFAttributeType> colorRandom;
+	colorRandom.Add(ECPGDTFAttributeType::Color_n_WheelRandom);
+	attributes.Add(colorRandom);
+
+	TSet<ECPGDTFAttributeType> colorAudio;
+	colorAudio.Add(ECPGDTFAttributeType::Color_n_WheelAudio);
+	attributes.Add(colorAudio);
+
+	return attributes;
 }
 
-void UCPGDTFColorWheelFixtureComponent::SetTargetValue(float WheelIndex) {
-
-	if (this->HasBegunPlay()) {
-		if (this->bUseInterpolation) {
-			if (this->CurrentWheelIndex.bFirstValueWasSet)
-				// Only 'Push' the next value into interpolation. BPs will read the resulting value on tick.
-				this->CurrentWheelIndex.Push(WheelIndex);
-			else {
-				// Jump to the first value if it never was set
-				this->CurrentWheelIndex.SetValueNoInterp(WheelIndex);
-				this->CurrentWheelIndex.bFirstValueWasSet = true;
-
-				SetValueNoInterp(WheelIndex);
-			}
-		} else {
-			this->CurrentWheelIndex.SetValueNoInterp(WheelIndex);
-			SetValueNoInterp(WheelIndex);
-		}
-	}
+float UCPGDTFColorWheelFixtureComponent::getDefaultRealFade(FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.5167 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFColorWheelFixtureComponent::getDefaultRealAcceleration(FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.0167 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFColorWheelFixtureComponent::getDefaultFadeRatio(float realAcceleration, FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 29.000 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFColorWheelFixtureComponent::getDefaultAccelerationRatio(float realFade, FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.0323 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
 }
 
 /**
  * Read DMXValue and apply the effect to the Beam
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 18 july 2022
  *
  * @param DMXValue
 */
-void UCPGDTFColorWheelFixtureComponent::ApplyEffectToBeam(int32 DMXValue) {
-
-	if (this->DMXChannelTree.IsEmpty()) return;
-
-	TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*> DMXBehaviour = this->DMXChannelTree.GetBehaviourByDMXValue(DMXValue);	
-	// If we are unable to find the behaviour in the tree we can't do anything
-	if (DMXBehaviour.Key == nullptr || DMXBehaviour.Value == nullptr) return;
-
-	ECPGDTFAttributeType AttributeType = CPGDTFDescription::GetGDTFAttributeTypeValueFromString(DMXBehaviour.Key->Attribute.Name.ToString());
-	float PhysicalValue = UKismetMathLibrary::MapRangeClamped(DMXValue, DMXBehaviour.Value->DMXFrom.Value, DMXBehaviour.Value->DMXTo.Value, DMXBehaviour.Value->PhysicalFrom, DMXBehaviour.Value->PhysicalTo);
-
+void UCPGDTFColorWheelFixtureComponent::ApplyEffectToBeam(int32 DMXValue, FCPComponentChannelData& channel, TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*>& DMXBehaviour, ECPGDTFAttributeType& AttributeType, float physicalValue) {
 	switch (AttributeType) {
 
-	case ECPGDTFAttributeType::Color_n_:
-	case ECPGDTFAttributeType::Color_n_WheelIndex:
-		this->ColorWheelPeriod = 0;
-		this->CurrentTime = 0;
-		this->SetTargetValue(PhysicalValue + (float)DMXBehaviour.Value->WheelSlotIndex);
-		break;
+		case ECPGDTFAttributeType::Color_n_: //Color indexing
+		case ECPGDTFAttributeType::Color_n_WheelIndex:
+			this->ColorWheelPeriod = 0;
+			this->CurrentTime = 0;
+			this->SetTargetValue(physicalValue + (float)DMXBehaviour.Value->WheelSlotIndex, 0);
+			break;
 
-	case ECPGDTFAttributeType::ColorMacro_n_: // Color Macro or virtual color wheel
-		this->ColorWheelPeriod = 0;
-		this->CurrentTime = 0;
-		this->CurrentWheelIndex.SetValueNoInterp(PhysicalValue + (float)DMXBehaviour.Value->WheelSlotIndex);
-		this->SetValueNoInterp_OverWrite(PhysicalValue + (float)DMXBehaviour.Value->WheelSlotIndex);
-		break;
+		case ECPGDTFAttributeType::ColorMacro_n_: // Color Macro or virtual color wheel
+			this->ColorWheelPeriod = 0;
+			this->CurrentTime = 0;
+			this->interpolations[0].SetValueNoInterp(physicalValue + (float)DMXBehaviour.Value->WheelSlotIndex);
+			this->SetValueNoInterp_OverWrite(physicalValue + (float)DMXBehaviour.Value->WheelSlotIndex);
+			break;
 
-	case ECPGDTFAttributeType::Color_n_WheelSpin:
-		// We stop interpolation
-		this->CurrentWheelIndex.IsUpdating = false;
-		this->CurrentWheelIndex.TargetValue = this->CurrentWheelIndex.CurrentValue;
+		case ECPGDTFAttributeType::Color_n_WheelSpin:
+			// We stop interpolation
+			this->interpolations[0].EndInterpolation(false);
 
-		this->CurrentTime = 0;
-		if (PhysicalValue == 0) this->ColorWheelPeriod = 0;
-		else this->ColorWheelPeriod = 360 / PhysicalValue; // PhysicalValue is an Angular speed in deg/s
-		break;
+			this->CurrentTime = 0;
+			if (physicalValue == 0) this->ColorWheelPeriod = 0;
+			else this->ColorWheelPeriod = 360 / physicalValue; // PhysicalValue is an Angular speed in deg/s
+			break;
 
-	case ECPGDTFAttributeType::Color_n_WheelRandom:
-		// We stop interpolation
-		this->CurrentWheelIndex.IsUpdating = false;
-		this->CurrentWheelIndex.TargetValue = this->CurrentWheelIndex.CurrentValue;
+		case ECPGDTFAttributeType::Color_n_WheelRandom:
+			// We stop interpolation
+			this->interpolations[0].EndInterpolation(false);
 
-		// Here the Physical value is a frenquency in Hz. If the GDTF use default physical values we fallback on default ones
-		if (DMXBehaviour.Value->PhysicalFrom == 0 && DMXBehaviour.Value->PhysicalTo == 1) this->ColorWheelPeriod = UKismetMathLibrary::MapRangeClamped(DMXValue, DMXBehaviour.Value->DMXFrom.Value, DMXBehaviour.Value->DMXTo.Value, 0.2, 5);
-		else this->ColorWheelPeriod = PhysicalValue;
-		break;
+			// Here the Physical value is a frenquency in Hz. If the GDTF use default physical values we fallback on default ones
+			if (DMXBehaviour.Value->PhysicalFrom == 0 && DMXBehaviour.Value->PhysicalTo == 1) this->ColorWheelPeriod = UKismetMathLibrary::MapRangeClamped(DMXValue, DMXBehaviour.Value->DMXFrom.Value, DMXBehaviour.Value->DMXTo.Value, 0.2, 5);
+			else this->ColorWheelPeriod = physicalValue;
+			break;
 
-	case ECPGDTFAttributeType::Color_n_WheelAudio: // Very complex to implement. For now we disable ColorWheel
-	default:// Not supported behaviour
-		if (DMXValue == this->GDTFDMXChannelDescription.Default.Value) this->SetTargetValue(0); // To avoid stack overflows
-		else this->ApplyEffectToBeam(this->GDTFDMXChannelDescription.Default.Value);
-		break;
-	}
-	this->RunningEffectType = AttributeType;
+		case ECPGDTFAttributeType::Color_n_WheelAudio: // TODO Very complex to implement. For now we disable ColorWheel
+		default: break;// Not supported behaviour
+		}
 }
 
-void UCPGDTFColorWheelFixtureComponent::InterpolateComponent(float DeltaSeconds) {
-
-	if (this->AttachedBeams.Num() < 1) return;
-
+void UCPGDTFColorWheelFixtureComponent::InterpolateComponent_BeamInternal(float deltaSeconds, FCPComponentChannelData& channel) {
 	float WheelIndex;
 
-	switch (this->RunningEffectType) {
+	switch (channel.RunningEffectTypeChannel) {
+		case ECPGDTFAttributeType::ColorMacro_n_:
+			SetValueNoInterp_OverWrite(this->interpolations[0].getCurrentValue());
+			break;
 
-	case ECPGDTFAttributeType::ColorMacro_n_:
-		SetValueNoInterp_OverWrite(this->CurrentWheelIndex.CurrentValue);
-		break;
-
-	case ECPGDTFAttributeType::Color_n_WheelSpin:
-
-		if (this->ColorWheelPeriod == 0) break;
+		case ECPGDTFAttributeType::Color_n_WheelSpin:
+			if (this->ColorWheelPeriod == 0) break;
 		
-		WheelIndex = (this->CurrentWheelIndex.CurrentValue + (this->WheelColors.Num()) * (DeltaSeconds / this->ColorWheelPeriod));
-		while (WheelIndex >= this->WheelColors.Num()) {
-			WheelIndex -= this->WheelColors.Num();
-		}
-		while (WheelIndex <= 0) {
-			WheelIndex += this->WheelColors.Num();
-		}
-		this->SetValueNoInterp(WheelIndex);
-		this->CurrentWheelIndex.SetValueNoInterp(WheelIndex);
-		break;
+			WheelIndex = (this->interpolations[0].getCurrentValue() + (this->WheelColors.Num()) * (deltaSeconds / this->ColorWheelPeriod));
+			WheelIndex = FMath::Fmod(WheelIndex, this->WheelColors.Num());
+			if(WheelIndex < 0)
+				WheelIndex += this->WheelColors.Num();
+			this->SetValueNoInterp(WheelIndex, 0);
+			this->interpolations[0].SetValueNoInterp(WheelIndex);
+			break;
 
-	case ECPGDTFAttributeType::Color_n_WheelRandom:
+		case ECPGDTFAttributeType::Color_n_WheelRandom:
 
-		this->CurrentTime += DeltaSeconds;
-		if (this->CurrentTime >= this->ColorWheelPeriod) {
-			this->CurrentTime = 0;
-			this->SetTargetValue(FMath::RandHelper(this->WheelColors.Num()));
-		}
-		break;
+			this->CurrentTime += deltaSeconds;
+			if (this->CurrentTime >= this->ColorWheelPeriod) {
+				this->CurrentTime = 0;
+				this->SetTargetValue(FMath::RandHelper(this->WheelColors.Num()), 0);
+			}
+			break;
 		
-	default:
-		break;
-	}
-
-	if (this->CurrentWheelIndex.IsUpdating) {
-		this->CurrentWheelIndex.Travel(DeltaSeconds); // Update
-		if (this->CurrentWheelIndex.IsInterpolationDone()) this->CurrentWheelIndex.EndInterpolation(); // Is done?
-		this->SetValueNoInterp(this->CurrentWheelIndex.CurrentValue);
+		default:
+			break;
 	}
 }
 
 /**
  * Apply a color to the light entire output
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 18 july 2022
  *
  * @param Beam
  * @param WheelIndex
  */
-void UCPGDTFColorWheelFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float WheelIndex) {
+void UCPGDTFColorWheelFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float WheelIndex, int interpolationId) {
+	//Keeping them for test old lights
+	#ifdef ENABLE_OLD_RENDER
+		setAllScalarParameters(Beam, "DMX Color Wheel Index", WheelIndex);
+	#endif
+	setAllScalarParameters(Beam, this->mIndexParamName, WheelIndex);
 
-	if (Beam == nullptr) return;
+	#ifdef ENABLE_OLD_RENDER
+		int32 IntWheelIndex = FMath::TruncToInt(WheelIndex);
+		if (IntWheelIndex < 0) IntWheelIndex += this->WheelColors.Num();
+		FLinearColor CrossfadedColor;
+		if (IntWheelIndex >= this->WheelColors.Num()) CrossfadedColor = UKismetMathLibrary::LinearColorLerp(this->WheelColors[this->WheelColors.Num() - 1], this->WheelColors[0], FMath::Fractional(WheelIndex));
+		else CrossfadedColor = UKismetMathLibrary::LinearColorLerp(this->WheelColors[IntWheelIndex], this->WheelColors[IntWheelIndex + 1], FMath::Fractional(WheelIndex));
 
-	if (Beam->DynamicMaterialBeam) Beam->DynamicMaterialBeam->SetScalarParameterValue("DMX Color Wheel Index", WheelIndex);
-	if (Beam->DynamicMaterialLens) Beam->DynamicMaterialLens->SetScalarParameterValue("DMX Color Wheel Index", WheelIndex);
-
-	int32 IntWheelIndex = FMath::TruncToInt(WheelIndex);
-	if (IntWheelIndex < 0) IntWheelIndex += this->WheelColors.Num();
-	FLinearColor CrossfadedColor;
-	if (IntWheelIndex + 1 >= this->WheelColors.Num()) CrossfadedColor = UKismetMathLibrary::LinearColorLerp(this->WheelColors[IntWheelIndex], this->WheelColors[0], FMath::Fractional(WheelIndex));
-	else CrossfadedColor = UKismetMathLibrary::LinearColorLerp(this->WheelColors[IntWheelIndex], this->WheelColors[IntWheelIndex + 1], FMath::Fractional(WheelIndex));
-
-	this->CurrentColor = FLinearColor(1, 1, 1, 1) - CrossfadedColor; // We need to invert the color to have the filter one and not the beam color
-	this->bIsMacroColor = false;
+		this->CurrentColor = FLinearColor(1, 1, 1, 1) - CrossfadedColor; // We need to invert the color to have the filter one and not the beam color
+		this->bIsMacroColor = false;
+	#endif
 }
 
 /**
  * Apply a color to the light output overwriting other color components values.
  * Used for color macros and virtual color wheels
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 04 august 2022
  *
  * @param WheelIndex
  */
 void UCPGDTFColorWheelFixtureComponent::SetValueNoInterp_OverWrite(float WheelIndex) {
-
 	for (UCPGDTFBeamSceneComponent* Component : this->AttachedBeams) {
-
 		Component->ResetLightColorTemp();
 		Component->SetLightColor(FLinearColor(1, 1, 1)); // Set White base color
-		SetValueNoInterp_BeamInternal(Component, WheelIndex);
+		this->interpolations[0].lastValue = WheelIndex;
+		SetValueNoInterp_BeamInternal(Component, WheelIndex, 0);
 		this->bIsMacroColor = true;
 	}
 }
+
+#ifdef ENABLE_OLD_RENDER
+#undef ENABLE_OLD_RENDER
+#endif

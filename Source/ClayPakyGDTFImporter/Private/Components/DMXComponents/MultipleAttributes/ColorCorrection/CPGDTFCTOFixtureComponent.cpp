@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,59 +26,62 @@ SOFTWARE.
 #include "Components/DMXComponents/MultipleAttributes/ColorCorrection/CPGDTFCTOFixtureComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 
-void UCPGDTFCTOFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels) {
-
-	Super::Setup(AttachedGeometryNamee, DMXChannels);
-	if (DMXChannels[0].Offset.Num() > 0) this->ChannelAddress = DMXChannels[0].Offset[0];
-	else this->ChannelAddress = -1;
-	this->GDTFDMXChannelDescription = DMXChannels[0];
-	this->DMXChannelTree.Insert(this->GDTFDMXChannelDescription.LogicalChannels[0], this->GDTFDMXChannelDescription.Offset.Num());
-
+bool UCPGDTFCTOFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
+	Super::Setup(AttachedGeometryNamee, DMXChannels, attributeIndex);
 	this->bIsRawDMXEnabled = true;
+	return true;
 }
 
 void UCPGDTFCTOFixtureComponent::BeginPlay() {
-
-	Super::BeginPlay();
-	if (this->DMXChannelTree.IsEmpty()) this->DMXChannelTree.Insert(this->GDTFDMXChannelDescription.LogicalChannels[0], this->GDTFDMXChannelDescription.Offset.Num());
+	TArray<FCPDMXChannelData> data;
+	FCPDMXChannelData cd;
+	data.Add(cd);
+	Super::BeginPlay(data);
+	interpolations[0].bInterpolationEnabled = false;
 	this->bIsRawDMXEnabled = true; // Just to make sure
 	this->IsCTOEnabled = false;
 }
 
-void UCPGDTFCTOFixtureComponent::PushDMXRawValues(UDMXEntityFixturePatch* FixturePatch, const TMap<int32, int32>& RawValuesMap) {
-
-	if (this->DMXChannelTree.IsEmpty()) return;
-
-	const int32* DMXValuePtr = RawValuesMap.Find(this->ChannelAddress);
-	if (DMXValuePtr) {
-
-		TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*> DMXBehaviour = this->DMXChannelTree.GetBehaviourByDMXValue(*DMXValuePtr);
-		// If we are unable to find the behaviour in the tree we can't do anything
-		if (DMXBehaviour.Key == nullptr || DMXBehaviour.Value == nullptr) return;
-
+void UCPGDTFCTOFixtureComponent::ApplyEffectToBeam(int32 DMXValue, FCPComponentChannelData& channel, TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*>& DMXBehaviour, ECPGDTFAttributeType& AttributeType, float physicalValue) {
+	if (AttributeType == ECPGDTFAttributeType::CTO) {
 		if (DMXBehaviour.Value->DMXFrom.Value == 0) { // Disable CTO
 			this->IsCTOEnabled = false;
-			this->SetValueNoInterp(-1);
+			this->SetValueNoInterp(-1, 0);
 			return;
 		}
 
-		float PhysicalValue = UKismetMathLibrary::MapRangeClamped(*DMXValuePtr, DMXBehaviour.Value->DMXFrom.Value, DMXBehaviour.Value->DMXTo.Value, DMXBehaviour.Value->PhysicalFrom, DMXBehaviour.Value->PhysicalTo);
-
-		this->ColorTemperature = PhysicalValue;
 		this->IsCTOEnabled = true;
-		this->SetValueNoInterp(this->ColorTemperature);
+		this->ColorTemperature = physicalValue;
+		this->SetValueNoInterp(physicalValue, 0);
 	}
 }
 
-void UCPGDTFCTOFixtureComponent::InterpolateComponent(float DeltaSeconds) {
-
-	if (this->AttachedBeams.Num() < 1) return;
-
-	if (this->IsCTOEnabled) this->SetValueNoInterp(this->ColorTemperature);
+void UCPGDTFCTOFixtureComponent::InterpolateComponent_BeamInternal(float deltaSeconds, FCPComponentChannelData& channel) {
+	if (this->IsCTOEnabled) this->SetValueNoInterp(this->ColorTemperature, 0);
 }
 
-void UCPGDTFCTOFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float Value) {
+void UCPGDTFCTOFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* beam, float value, int interpolationId) {
+	if (this->IsCTOEnabled) beam->SetLightColorTemp(value);
+	else if (value == -1) beam->ResetLightColorTemp();
+}
 
-	if (this->IsCTOEnabled) Beam->SetLightColorTemp(Value);
-	else if (Value == -1) Beam->ResetLightColorTemp();
+TArray<TSet<ECPGDTFAttributeType>> UCPGDTFCTOFixtureComponent::getAttributeGroups() {
+	TArray<TSet<ECPGDTFAttributeType>> ret;
+	return ret;
+}
+float UCPGDTFCTOFixtureComponent::getDefaultRealFade(FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.1000 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFCTOFixtureComponent::getDefaultRealAcceleration(FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.0229 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFCTOFixtureComponent::getDefaultFadeRatio(float realAcceleration, FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 2.3636 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFCTOFixtureComponent::getDefaultAccelerationRatio(float realFade, FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.2292 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
 }

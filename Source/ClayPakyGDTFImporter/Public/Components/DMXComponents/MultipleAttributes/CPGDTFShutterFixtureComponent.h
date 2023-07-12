@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ SOFTWARE.
 
 #include "CoreMinimal.h"
 #include "Utils/CPGDTFPulseEffectManager.h"
-#include "Components/DMXComponents/CPGDTFMultipleAttributeBeamFixtureComponent.h"
+#include "Components/DMXComponents/CPGDTFMultipleAttributeFixtureComponent.h"
 #include "CPGDTFShutterFixtureComponent.generated.h"
 
 /**
@@ -36,18 +36,16 @@ SOFTWARE.
 /// \cond NOT_DOXYGEN
 UCLASS(ClassGroup = (DMX), Meta = (BlueprintSpawnableComponent, DisplayName = "Shutter Component", RestrictedToClasses = "ACPGDTFFixtureActor"), HideCategories = ("Variable", "Sockets", "Tags", "Activation", "Cooking", "ComponentReplication", "AssetUserData", "Collision", "Events"))
 /// \endcond
-class CLAYPAKYGDTFIMPORTER_API UCPGDTFShutterFixtureComponent : public UCPGDTFMultipleAttributeBeamFixtureComponent {
+class CLAYPAKYGDTFIMPORTER_API UCPGDTFShutterFixtureComponent : public UCPGDTFMultipleAttributeFixtureComponent {
 
 	GENERATED_BODY()
 
 protected:
 
-	ECPGDTFAttributeType RunningEffectType = ECPGDTFAttributeType::Shutter_n_;
-
-	FDMXChannelTree DMXChannelTree;
-
-	UPROPERTY()
-	FDMXImportGDTFDMXChannel GDTFDMXChannelDescription;
+	enum InterpolationIds {
+		STROBE,
+		INTENSITY
+	};
 
 	//Specific for effects interpolation
 
@@ -62,47 +60,39 @@ protected:
 public:
 	UCPGDTFShutterFixtureComponent() {};
 
-	void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels) override;
+	bool Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) override;
 
-	void BeginPlay();
+	void BeginPlay() override;
 	//void OnConstruction() override;
 
 	  /*******************************************/
 	 /*               DMX Related               */
 	/*******************************************/
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0", ClampMax = "512"), Category = "DMX Channels")
-		int32 ChannelAddress;
-
-	/// Pushes DMX Values to the Component. Expects normalized values in the range of 0.0f - 1.0f
-	virtual void PushDMXRawValues(UDMXEntityFixturePatch* FixturePatch, const TMap<int32, int32>& RawValuesMap) override;
-
 	/**
 	 * Read DMXValue and apply the effect to the Beam
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 * 
 	 * @param DMXValue 
 	 */
-	void ApplyEffectToBeam(int32 DMXValue);
+	void ApplyEffectToBeam(int32 DMXValue, FCPComponentChannelData& channel, TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*>& DMXBehaviour, ECPGDTFAttributeType& AttributeType, float physicalValue);
 
-	void InterpolateComponent(float DeltaSeconds) override;
+	void InterpolateComponent_BeamInternal(float deltaSeconds, FCPComponentChannelData& channel) override;
 
 	  /*******************************************/
 	 /*           Component Specific            */
 	/*******************************************/
 
-	void SetValueNoInterp(float Value) override {
-		this->ApplyParametersToBeam(Value, 0);
-	}
-
 protected:
 
-	void ApplyParametersToBeam(float Intensity, float Frequency);
+	TArray<TSet<ECPGDTFAttributeType>> getAttributeGroups() override;
+
+	void SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float value, int interpolationId) override;
 
 	/**
 	 * Start a PulseEffect for given parameters
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 22 july 2022
 	 *
 	 * @param AttributeType
@@ -113,7 +103,7 @@ protected:
 
 	/**
 	 * Setup the object for given parameters
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 22 july 2022
 	 *
 	 * @param DMXValue

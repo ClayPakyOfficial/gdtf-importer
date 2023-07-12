@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ SOFTWARE.
 
 /**
  * Blend the internal color with the given one
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 21 july 2022
  *
  * @param BlendingColor
@@ -123,7 +123,7 @@ void FCPColorWizard::BlendUV(float Intensity) {
 
 /**
  * Convert a HSV color representation to a RGB one
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 25 july 2022
  *
  * @param H Hue Must be in range [0; 360]
@@ -137,7 +137,7 @@ FLinearColor FCPColorWizard::ColorHSVToRGB(float H, float S, float V) {
 
 /**
  * Convert a RGB color representation to a HSV one
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 25 july 2022
  *
  * @param RGBColor Color to convert
@@ -151,7 +151,7 @@ FVector3f FCPColorWizard::ColorRGBToHSV(FLinearColor RGBColor) {
 
 /**
  * Convert a CIE color representation to a RGB one
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 11 july 2022
  *
  * @param InitialColor Color to convert
@@ -197,7 +197,7 @@ FLinearColor FCPColorWizard::ColorCIEToRGB(FDMXColorCIE InitialColor) {
 
 /**
  * Convert a RGB color representation to a CIE one
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 11 july 2022
  *
  * @param RGB Color to convert

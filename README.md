@@ -1,9 +1,7 @@
 # Unreal GDTFImporter by Clay Paky
 
 <div align="center" style="background-color: black; padding: 40px 0 20px 0;">
-<img src="Resources/logo-claypaky.png" srcset="logo-claypaky.png" width="20%"/>
-<br><br>
-<img src="Resources/Splash.png" srcset="Splash.png" width="50%"/>
+<img src="Resources/splash_docs.png" srcset="splash_docs.png" width="60%"/>
 <h1 align="center" style="color: white !important;">Unreal GDTFImporter by Clay Paky</h1></div>
 <h2><em><strong>WARNING :</strong></em> This plugin is still under development.
 </h2>
@@ -16,17 +14,11 @@
 - Do the TODOs
 
 - Improve documentation
-- **Add support of multiple Color/Gobo wheels on the same fixture**
-- Extract the interpolation system (FChannelInterpolation property) in an interface to avoid code duplicate
 - Fix Lens texture not centered
-- Add the reconfiguration of a DMXComponent (channel description and everything) on DMXAddress change.
-- Add support of DMXModes on GDTF ChannelFunctions (See GDTF of Robe Pointe rotating Gobos DMX channels)
 - Check the accuracy of rotation matrix parsing in ``FCPGDTFImporterUtils``
 - Add missing attributes supports on Color and Gobo Wheel components
 - Create generic parametric BeamType assets on unreal (See ``ECPGDTFDescriptionGeometryBeamType``)
-- Manage differents DMXModes (Reconfigure Actor on Mode change)
 - ADD laser support inspired by existing implementation on DMXFixtures plugin
-- fix pan/tilt smooth
 - linear frost?
 
 ## Idea of improvement
@@ -40,15 +32,11 @@ Add a option in the interface to ask the DMXLibrary to use and create the Fixtur
 ## Known Limitations
 
 Solvable
-- Only one color and one gobo wheel on one fixture
-- The fixtures will be configured with the first DMX mode and it can't be changed throught UI
-- The DMX mode can't be changed throught UI (same problem that previous line)
 - Channels modifiying the behaviour of other channels is not supported
 - No support of infinite Pan/Tilt
 
 Permanent
-- Bad GDTF Files
-- Impossible to render colored glass gobos on the spotlight (because an Unreal's light function only apply to the intensity)
+- Bad GDTF Files (Some stuff can be worked around)
 - Incompatible with GDTF < 1.2 because of ``.3ds`` models only
 - Focus not relevant because of the way of Unreal Engine render spotlights light functions.
 
@@ -90,6 +78,7 @@ Follow the same procedure than the 'Project Plugin installation' but extract the
 - ``UPROPERTY()`` macros ending with a semicolon will make Doxygen unable to generate the documentation of the property
 - ``UCLASS()`` ``UENUM()`` ``USTRUCT()`` ``GENERATED_BODY()`` macros sould **NEVER** end with a semicolon
 - To avoid Doxygen code parsing problems (``warning: Found ';' while parsing initializer list! (doxygen could be confused by a macro call without semicolon)``). Nested Unreal macros calls like ``UCLASS(ClassGroup = (DMX), Meta = (BlueprintSpawnableComponent))`` needs to be excluded of Doxygen parsing with ``/// \ cond NOT_DOXYGEN`` / ``/// \ endcond`` (without space after backslash)
+- To edit a .cpp/.h name o change the path of a file, you have to: Close UE4 and VS; Delete/Move the header and source to Private/Public setup you want; Delete .vs, Intermediate, Binaries, Saved and DerivedDataCache folders in the File Explorer; Right-Click .uproject file and hit regenerate VS project files; Open .sln and build solution. NOTE: It will take ages to fully rebuild the solution. SOURCE: https://www.reddit.com/r/unrealengine/comments/gbggsn/is_there_a_way_to_set_c_classes_as_public_or/ 
 
 ## Generate the docs
 ***Requires [Doxygen](https://www.doxygen.nl/download.html#srcbin) and [Graphviz](https://graphviz.org/download/#executable-packages) installed***

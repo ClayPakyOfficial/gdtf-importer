@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ SOFTWARE.
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/DMXComponents/CPGDTFSimpleAttributeBeamFixtureComponent.h"
+#include "Components/DMXComponents/CPGDTFSimpleAttributeFixtureComponent.h"
 #include "CPGDTFDimmerFixtureComponent.generated.h"
 
 
@@ -36,16 +36,16 @@ SOFTWARE.
 /// \cond NOT_DOXYGEN
 UCLASS(ClassGroup = (DMX), Meta = (BlueprintSpawnableComponent, DisplayName = "Dimmer Component", RestrictedToClasses = "ACPGDTFFixtureActor"), HideCategories = ("Variable", "Sockets", "Tags", "Activation", "Cooking", "ComponentReplication", "AssetUserData", "Collision", "Events"))
 /// \endcond
-class CLAYPAKYGDTFIMPORTER_API UCPGDTFDimmerFixtureComponent : public UCPGDTFSimpleAttributeBeamFixtureComponent {
+class CLAYPAKYGDTFIMPORTER_API UCPGDTFDimmerFixtureComponent : public UCPGDTFSimpleAttributeFixtureComponent {
 
 	GENERATED_BODY()
 
 public:
 	UCPGDTFDimmerFixtureComponent() {};
 
-	void BeginPlay() override;
+	virtual bool Setup(FDMXImportGDTFDMXChannel DMXChannell, int attributeIndex) override; 
 
-	void InterpolateComponent(float DeltaSeconds) override;
+	void BeginPlay() override;
 
 	  /*******************************************/
 	 /*           Component Specific            */
@@ -53,5 +53,5 @@ public:
 
 protected:
 
-	void SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float Intensity) override;
+	void SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float Intensity, int interpolationId) override;
 };

@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -61,11 +61,8 @@ public:
 
 	UCPGDTFSubstractiveColorSourceFixtureComponent();
 
-	//void BeginPlay();
-	//void OnConstruction() override;
-
 	/// The array is present for future support of more complex LED engines
-	virtual void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables) override;
+	virtual bool Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables, int attributeIndex) override;
 
 	  /*******************************************/
 	 /*               DMX Related               */
@@ -73,4 +70,13 @@ public:
 
 	/// Pushes DMX Values to the Component. Expects normalized values in the range of 0.0f - 1.0f
 	virtual void PushNormalizedRawValues(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedRawDMXValueMap& RawValuesMap) override;
+
+protected:
+	TArray<TSet<ECPGDTFAttributeType>> getAttributeGroups() override;
+
+	virtual float getDefaultRealAcceleration(FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultRealFade(FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultAccelerationRatio(float realFade, FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultFadeRatio(float realAcceleration, FCPDMXChannelData& channelData, int interpolationId) override;
+
 };

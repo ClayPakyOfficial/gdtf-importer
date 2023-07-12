@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ SOFTWARE.
 #pragma once
 
 #include "CoreMinimal.h"
-#include "CPGDTFMultipleAttributeBeamFixtureComponent.h"
+#include "CPGDTFMultipleAttributeFixtureComponent.h"
 #include "CPGDTFColorSourceFixtureComponent.generated.h"
 
 /// Extension of FCPDMXChannelData to store the color managed by a specific channel
@@ -34,6 +34,8 @@ USTRUCT(BlueprintType)
 struct FCPDMXColorChannelData : public FCPDMXChannelData {
 
 	GENERATED_BODY()
+
+public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "DMX Channel")
 		ECPGDTFAttributeType ColorAttribute = ECPGDTFAttributeType::NoFeature;
@@ -45,7 +47,7 @@ struct FCPDMXColorChannelData : public FCPDMXChannelData {
 
 /// Abstract Object who regroup all the colored sources DMXComponents
 UCLASS(Abstract)
-class UCPGDTFColorSourceFixtureComponent : public UCPGDTFMultipleAttributeBeamFixtureComponent {
+class UCPGDTFColorSourceFixtureComponent : public UCPGDTFMultipleAttributeFixtureComponent {
 
 	GENERATED_BODY()
 
@@ -55,9 +57,13 @@ protected:
 
 public:
 
-	void BeginPlay();
+	void BeginPlay(int interpolationsNeededNo, float RealFade, float RealAcceleration, float rangeSize, float defaultValue) override;
+	void BeginPlay(TArray<FCPDMXChannelData> interpolationValues) override;
 	//void OnConstruction() override;
 	
+	virtual void ApplyEffectToBeam(int32 DMXValue, FCPComponentChannelData& channel, TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*>& DMXBehaviour, ECPGDTFAttributeType& AttributeType, float physicalValue);
+	virtual void SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* beam, float value, int interpolationId);
+
 	  /*******************************************/
 	 /*           Component Specific            */
 	/*******************************************/

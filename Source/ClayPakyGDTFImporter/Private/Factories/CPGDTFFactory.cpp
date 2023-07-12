@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +39,8 @@ SOFTWARE.
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Misc/FeedbackContext.h"
 #include "ObjectTools.h"
+#include "Editor.h"
+#include "Selection.h"
 #include "SubSystems/EditorAssetSubsystem.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Kismet2/CompilerResultsLog.h"
@@ -90,9 +92,19 @@ UClass* UCPGDTFFactory::ResolveSupportedClass() {
 	return UCPGDTFDescription::StaticClass();
 }
 
+FName UCPGDTFFactory::generateActorName(UCPGDTFDescription* XMLDescription) {
+	return FName(ObjectTools::SanitizeObjectName("A_" + Cast<UDMXImportGDTFFixtureType>(XMLDescription->FixtureType)->Name.ToString()));
+}
+FString UCPGDTFFactory::generateModeName(int mode) {
+	return TEXT("m") + FString::FromInt(mode) + TEXT("m");
+}
+FName UCPGDTFFactory::generateActorModeName(UCPGDTFDescription* XMLDescription, int mode) {
+	return FName(ObjectTools::SanitizeObjectName(generateActorName(XMLDescription).ToString() + "_" + generateModeName(mode)));
+}
+
 /**
  * Import GDTF file in the Content Browser
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 04 may 2022
  *
  * @param InClass       UCPGDTFDescription - Class used to instantiate the object
@@ -105,6 +117,8 @@ UClass* UCPGDTFFactory::ResolveSupportedClass() {
  * @param bOutOperationCanceled
  */
 UObject* UCPGDTFFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, const FString& InFilename, const TCHAR* Parms, FFeedbackContext* Warn, bool& bOutOperationCanceled) {
+	UE_LOG_CPGDTFIMPORTER(Display, TEXT("CPGDTFRenderPipelineBuilder: UCPGDTFFactory::FactoryCreateFile CALLED - start"));
+
 
 	// Check if the file exists on disk
 	if (!IFileManager::Get().FileExists(*InFilename)) {
@@ -118,8 +132,10 @@ UObject* UCPGDTFFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, F
 	CA_ASSUME(InParent);
 	const TCHAR* Type = *FPaths::GetExtension(InFilename); // = "gdtf"
 
+	UE_LOG_CPGDTFIMPORTER(Display, TEXT("CPGDTFRenderPipelineBuilder: UCPGDTFFactory::FactoryCreateFile CALLED - broadcast"));
 	GEditor->GetEditorSubsystem<UImportSubsystem>()->BroadcastAssetPreImport(this, InClass, InParent, InName, Type);
 
+	UE_LOG_CPGDTFIMPORTER(Display, TEXT("CPGDTFRenderPipelineBuilder: UCPGDTFFactory::FactoryCreateFile CALLED - check if exist"));
 	// Check if GDTF was already imported
 	if (InParent != nullptr && FCPGDTFImporterUtils::IsAssetExisting(InName.ToString(), InParent->GetName()) != nullptr) {
 
@@ -129,9 +145,11 @@ UObject* UCPGDTFFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, F
 		ImportUI->bImportTextures = true;
 	}
 
+	UE_LOG_CPGDTFIMPORTER(Display, TEXT("CPGDTFRenderPipelineBuilder: UCPGDTFFactory::FactoryCreateFile CALLED - creating xlr"));
 	// Creation of the XML Importer object
 	FCPGDTFDescriptionImporter XMLImporter = FCPGDTFDescriptionImporter(InParent->GetPackage(), InName, Flags, InFilename);
 
+	UE_LOG_CPGDTFIMPORTER(Display, TEXT("CPGDTFRenderPipelineBuilder: UCPGDTFFactory::FactoryCreateFile CALLED - opening ui"));
 	// Sould we open the UI ?
 	bool bImportAll = false;
 	if (this->bShowOption && !IsAutomatedImport()) SCPGDTFOptionWindow::GetImportOptions(ImportUI, InParent->GetPathName(), this->bOperationCanceled, bImportAll);
@@ -148,6 +166,7 @@ UObject* UCPGDTFFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, F
 		return nullptr;
 	}
 
+	UE_LOG_CPGDTFIMPORTER(Display, TEXT("CPGDTFRenderPipelineBuilder: UCPGDTFFactory::FactoryCreateFile CALLED - start import"));
 	/**
 	 * BEGINNING OF GDTF IMPORT
 	 */
@@ -200,55 +219,75 @@ UObject* UCPGDTFFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, F
 
 				// If 3D models import went well and a complete import was requested we create the actor
 			} else if (ImportUI->bImportXML && ImportUI->bImportTextures && ImportUI->bImportModels) {
+				struct ReimportBP { UBlueprint* existingBp, *newBp;  ReimportBP(UBlueprint* existingBlueprint, UBlueprint* newBlueprint) : existingBp(existingBlueprint), newBp(newBlueprint) {} };
+				TArray<UBlueprint*> newBluePrints;
+				TArray<ReimportBP> reimportBlueprints;
+				UBlueprint* mode0Bp = nullptr;
+				for (int mode = 0; mode < XMLDescription->GetDMXModes()->DMXModes.Num(); mode++) {
 
-				FName BluePrintName = FName(ObjectTools::SanitizeObjectName("A_" + Cast<UDMXImportGDTFFixtureType>(XMLDescription->FixtureType)->Name.ToString()));
-				UBlueprint* Blueprint = Cast<UBlueprint>(FCPGDTFImporterUtils::IsAssetExisting(BluePrintName.ToString(), InParent->GetName()));
-
-				if (Blueprint == nullptr) { // If import
+					FString modeName = generateModeName(mode);
+					FName BluePrintName = generateActorModeName(XMLDescription, mode);
+					FString BluePrintPath = InParent->GetName() + "/Actors/";
+					UBlueprint* ExistingBlueprint = Cast<UBlueprint>(FCPGDTFImporterUtils::IsAssetExisting(BluePrintName.ToString(), BluePrintPath));
 
 					// Creation of the ready to use Actor
 					ACPGDTFFixtureActor* Actor = NewObject<ACPGDTFFixtureActor>();
-					Actor->PreConstruct(XMLDescription, InParent->GetName());
+					Actor->FixturePathInContentBrowser = InParent->GetName();
+					Actor->ActorsPathInContentBrowser = BluePrintPath;
+					//Actor->CreateRenderingPipelines(XMLDescription);
+					Actor->CurrentModeName = generateModeName(mode);
+					Actor->CurrentModeIndex = mode;
+					Actor->PreConstruct(XMLDescription);
 
-					UPackage* BluePrintPackage = FCPGDTFImporterUtils::PreparePackage(BluePrintName.ToString(), InParent->GetName() + "/" + BluePrintName.ToString());
+					UPackage* BluePrintPackage = FCPGDTFImporterUtils::PreparePackage(BluePrintName.ToString(), BluePrintPath + BluePrintName.ToString());
+
 					// Convert Actor to a Blueprint
 					FKismetEditorUtilities::FCreateBlueprintFromActorParams Params;
 					Params.bOpenBlueprint = false;
 					Params.bReplaceActor = false;
-					Blueprint = FKismetEditorUtilities::CreateBlueprintFromActor(BluePrintName, BluePrintPackage, Actor, Params);
+					Params.bDeferCompilation = true;
+					UBlueprint* NewBlueprint = FKismetEditorUtilities::CreateBlueprintFromActor(BluePrintName, BluePrintPackage, Actor, Params);
+					if (mode0Bp == nullptr)
+						mode0Bp = NewBlueprint;
 
-					if (Blueprint != nullptr) {
-
-						// Notify the asset registry
-						FAssetRegistryModule::AssetCreated(Blueprint);
-						UEditorAssetSubsystem* EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
-						EditorAssetSubsystem->SaveDirectory(InParent->GetPackage()->GetName(), true, true);
-						FCPGDTFImporterUtils::SendNotification("Import success", FString::Printf(TEXT("Successfully imported '%s'"), *InFilename), SNotificationItem::CS_Success);
+					if (NewBlueprint != nullptr) {
+						if (ExistingBlueprint == nullptr) { // If import
+							UE_LOG_CPGDTFIMPORTER(Warning, TEXT("Importing '%s' blueprint"), *BluePrintName.ToString());
+							newBluePrints.Add(NewBlueprint);
+						} else { // Reimport
+							UE_LOG_CPGDTFIMPORTER(Warning, TEXT("Reimporting '%s' blueprint"), *BluePrintName.ToString());
+							reimportBlueprints.Add(ReimportBP(ExistingBlueprint, NewBlueprint));
+						}
 					} else {
 						UE_LOG_CPGDTFIMPORTER(Error, TEXT("Unable to create %s Actor"), *BluePrintName.ToString());
 						FCPGDTFImporterUtils::SendNotification("Import failed", FString::Printf(TEXT("Unable to create %s Actor"), *InFilename), SNotificationItem::CS_Fail);
 					}
-				} else { // Reimport
-
-
-					// First method trying to replace the existing BluePrint (not working well)
-					/*FKismetEditorUtilities::ReplaceBlueprint(ExistingBlueprint, NewBlueprint);
-					ExistingBlueprint->GetPackage()->SetDirtyFlag(true);
-					NewBlueprint->ConditionalBeginDestroy();
-					NewBlueprint->MarkAsGarbage();
-					FAssetRegistryModule::AssetDeleted(ExistingBlueprint);*/
-
-
-					// Second method editing the BluePrint (not working better)
-					/*ACPGDTFFixtureActor* BlueprintValues = Blueprint->GeneratedClass.Get()->GetDefaultObject<ACPGDTFFixtureActor>();
-					// Add Clear DMXComponents
-					// Add Clear geometry tree
-					BlueprintValues->PreConstruct(XMLDescription, InParent->GetName());
-					// Compile the changes
-					FCompilerResultsLog LogResults; // We don't really care of the logs here.
-					FKismetEditorUtilities::CompileBlueprint(Blueprint, EBlueprintCompileOptions::None, &LogResults);*/
-					
-					//Blueprint->MarkPackageDirty();
+				}
+				//We must skip garbage collection in the following phases and postpone it to the end, otherwise InParent will be deleted and we will segfault
+				//New blueprints
+				for (UBlueprint* bp : newBluePrints) {
+					FKismetEditorUtilities::CompileBlueprint(bp, EBlueprintCompileOptions::SkipGarbageCollection);
+					FAssetRegistryModule::AssetCreated(bp); // Notify the asset registry
+				}
+				//Reimport
+				if (reimportBlueprints.Num() > 0) {
+					GEditor->GetSelectedObjects()->DeselectAll();
+					GEditor->GetSelectedActors()->DeselectAll();
+					GEditor->GetSelectedComponents()->DeselectAll(); //Prevents segfault if we replace a blueprint to a selected object
+				}
+				for (ReimportBP bp : reimportBlueprints) {
+					FKismetEditorUtilities::CompileBlueprint(bp.newBp, EBlueprintCompileOptions::SkipGarbageCollection);
+					FKismetEditorUtilities::ReplaceBlueprint(bp.existingBp, bp.newBp); //Replace all existing instance of the old blueprint with the new, temporary, one
+					ObjectTools::DeleteAssets({ bp.newBp }, false); //Delete the new, temporary, blueprint
+				}
+				//If we have re/imported any blueprint
+				if (newBluePrints.Num() > 0 || reimportBlueprints.Num() > 0) {
+					UEditorAssetSubsystem* EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
+					if (mode0Bp) //Create a "base" blueprint
+						EditorAssetSubsystem->DuplicateLoadedAsset(mode0Bp, InParent->GetName() + "/" + generateActorName(XMLDescription).ToString());
+					CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS); //Finally collect garbage
+					EditorAssetSubsystem->SaveDirectory(InParent->GetPackage()->GetName(), true, true);
+					FCPGDTFImporterUtils::SendNotification("Import success", FString::Printf(TEXT("Successfully imported '%s'"), *InFilename), SNotificationItem::CS_Success);
 				}
 			}
 
@@ -264,8 +303,6 @@ UObject* UCPGDTFFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, F
 
 	if (ImportUI->bImportXML) {
 		GEditor->GetEditorSubsystem<UImportSubsystem>()->BroadcastAssetPostImport(this, XMLDescription);
-		//UEditorAssetSubsystem* EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
-		//EditorAssetSubsystem->SaveDirectory(InParent->GetPackage()->GetName(), true, true);
 		return XMLDescription;
 	} else {
 		GEditor->GetEditorSubsystem<UImportSubsystem>()->BroadcastAssetPostImport(this, nullptr);

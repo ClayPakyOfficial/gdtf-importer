@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@ SOFTWARE.
 
 #include "CoreMinimal.h"
 #include "CPGDTFDescription.h"
+#include "Library/DMXImportGDTF.h"
 #include "Widgets/Notifications/SNotificationList.h"
 
 /**
@@ -41,7 +42,7 @@ public:
 
     /**
      * Import a PNG from a GDTF file
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 06 may 2022
      *
      * @param GDTFPath  Path of the GDTF file on disk
@@ -53,7 +54,7 @@ public:
 
     /**
      * Import a 3D model from a GDTF file
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 10 may 2022
      *
      * @param GDTFPath  Path of the GDTF file on disk
@@ -65,7 +66,7 @@ public:
 
     /**
      * Try to find the Asset in the Content Browser
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 10 may 2022
      *
      * @param AssetName Name of the imported Asset
@@ -75,7 +76,7 @@ public:
 
     /**
      * Create the package on a subfolder for an imported asset
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 10 may 2022
      *
      * @param AssetName Name of the imported Asset
@@ -85,7 +86,7 @@ public:
 
     /**
      * Create the package for an imported asset
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 10 may 2022
      *
      * @param AssetName Name of the imported Asset
@@ -96,7 +97,7 @@ public:
 
     /**
      * Load all meshes from a folder on ContentBrowser.
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 27 may 2022
      *
      * @param ContentBrowserFolderPath Path to look for meshes
@@ -106,7 +107,7 @@ public:
 
     /**
      * Load a generic GDTF mesh.
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 01 june 2022
      *
      * @param Type Type of the mesh to load
@@ -116,7 +117,7 @@ public:
 
     /**
      * Load an Asset stored in Content Browser.
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 08 june 2022
      *
      * @param Path Path of the Asset
@@ -126,7 +127,7 @@ public:
 
     /**
      * Convert a GDTF "Position" to an Unreal FRotator.
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 24 may 2022
      *
      * @param InMatrix      Matrix to convert
@@ -136,14 +137,14 @@ public:
 
     /**
      * Really needs documentation ??
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 08 july 2022
     */
     static double NearestPowerOfTwo(double N);
 
     /**
      * Send notification to the UI
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 07 september 2022
      * 
      * @param Title Title of the notification
@@ -155,3 +156,85 @@ public:
      */
     static void SendNotification(FString Title, FString Message, SNotificationItem::ECompletionState State, float Duration = 5.0f, float FadeInDuration = 0.5f, float FadeOutDuration = 0.5f);
 };
+
+struct FCPDMXImportGDTFChannelFunction : public FDMXImportGDTFChannelFunction {
+    FDMXImportGDTFChannelSet* getChannelSetByName(FString csName) {
+        for (int i = 0; i < ChannelSets.Num(); i++)
+            if (ChannelSets[i].Name.Equals(*csName))
+                return &(ChannelSets[i]);
+        return nullptr;
+    }
+};
+
+struct FCPDMXImportGDTFLogicalChannel : public FDMXImportGDTFLogicalChannel {
+    FDMXImportGDTFChannelFunction* getChannelFunctionByName(FString name) {
+        TArray<FString> sp;
+        name.ParseIntoArray(sp, TEXT("."), false);
+        sp.RemoveAt(0); //name starts from the current element, remove it
+        return getChannelFunctionByName(sp);
+    }
+    FDMXImportGDTFChannelFunction* getChannelFunctionByName(TArray<FString> sp) {
+        FString cfName = sp[0]; //sp doesn't include the current element
+        for (int i = 0; i < ChannelFunctions.Num(); i++)
+            if (ChannelFunctions[i].Name.IsEqual(*cfName))
+                return &(ChannelFunctions[i]);
+        return nullptr;
+    }
+
+    FDMXImportGDTFChannelSet* getChannelSetByName(FString name) {
+        TArray<FString> sp;
+        name.ParseIntoArray(sp, TEXT("."), false);
+        sp.RemoveAt(0); //name starts from the current element, remove it
+        return getChannelSetByName(sp);
+    }
+    FDMXImportGDTFChannelSet* getChannelSetByName(TArray<FString> sp) {
+        FCPDMXImportGDTFChannelFunction *cf = static_cast<FCPDMXImportGDTFChannelFunction*>(getChannelFunctionByName(sp)); //Since we don't have any new member in this structs, we can (theoretically) static_cast without undefined behaviours. Btw, we can't just use Cast since it doesn't support structs
+        if (cf == nullptr) return nullptr;
+        return cf->getChannelSetByName(sp[1]);
+    }
+};
+
+struct FCPDMXImportGDTFDMXChannel : public FDMXImportGDTFDMXChannel {
+    FDMXImportGDTFLogicalChannel* getLogicalChannelByName(FString name) {
+        TArray<FString> sp;
+        name.ParseIntoArray(sp, TEXT("."), false);
+        sp.RemoveAt(0); //name starts from the current element, remove it
+        return getLogicalChannelByName(sp);
+    }
+    FDMXImportGDTFLogicalChannel* getLogicalChannelByName(TArray<FString> sp) {
+        FString logicalName = sp[0]; //sp doesn't include the current element
+        for (int i = 0; i < LogicalChannels.Num(); i++)
+            if (LogicalChannels[i].Attribute.Name.IsEqual(*logicalName))
+                return &(LogicalChannels[i]);
+        return nullptr;
+    }
+
+    FDMXImportGDTFChannelFunction* getChannelFunctionByName(FString name) {
+        TArray<FString> sp;
+        name.ParseIntoArray(sp, TEXT("."), false);
+        sp.RemoveAt(0); //name starts from the current element, remove it
+        return getChannelFunctionByName(sp);
+    }
+    FDMXImportGDTFChannelFunction* getChannelFunctionByName(TArray<FString> sp) {
+        FCPDMXImportGDTFLogicalChannel* logical = static_cast<FCPDMXImportGDTFLogicalChannel*>(getLogicalChannelByName(sp));
+        if (logical == nullptr) return nullptr;
+        sp.RemoveAt(0);
+        return logical->getChannelFunctionByName(sp);
+    }
+
+    FDMXImportGDTFChannelSet* getChannelSetByName(FString name) {
+        TArray<FString> sp;
+        name.ParseIntoArray(sp, TEXT("."), false);
+        sp.RemoveAt(0); //name starts from the current element, remove it
+        return getChannelSetByName(sp);
+    }
+    FDMXImportGDTFChannelSet* getChannelSetByName(TArray<FString> sp) {
+        FCPDMXImportGDTFLogicalChannel* logical = static_cast<FCPDMXImportGDTFLogicalChannel*>(getLogicalChannelByName(sp));
+        if (logical == nullptr) return nullptr;
+        sp.RemoveAt(0);
+        FCPDMXImportGDTFChannelFunction* cf = static_cast<FCPDMXImportGDTFChannelFunction*>(logical->getChannelFunctionByName(sp));
+        if (cf == nullptr) return nullptr;
+        return cf->getChannelSetByName(sp[1]);
+    }
+};
+    

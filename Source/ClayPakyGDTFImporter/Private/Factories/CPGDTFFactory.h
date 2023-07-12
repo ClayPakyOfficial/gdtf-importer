@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -57,7 +57,7 @@ public:
 
 	/**
 	 * Import GDTF file in the Content Browser
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 04 may 2022
 	 *
 	 * @param InClass       UCPGDTFDescription - Class used to instantiate the object
@@ -79,6 +79,10 @@ public:
 	virtual EReimportResult::Type Reimport(UObject* Obj) override;
 	virtual int32 GetPriority() const override;
 	//~ End FReimportHandler Interface
+
+	static FName generateActorName(UCPGDTFDescription* XMLDescription);
+	static FString generateModeName(int mode);
+	static FName generateActorModeName(UCPGDTFDescription* XMLDescription, int mode);
 
 public:
 	static const TCHAR* Extension;

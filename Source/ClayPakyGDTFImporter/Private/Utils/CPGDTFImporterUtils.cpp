@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,7 @@ SOFTWARE.
 
 /**
  * Import a PNG from a GDTF file
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 06 may 2022
  *
  * @param GDTFPath  Path of the GDTF file on disk
@@ -95,7 +95,7 @@ UTexture2D* FCPGDTFImporterUtils::ImportPNG(FString GDTFPath, FString AssetName,
 
 /**
  * Import a 3D model from a GDTF file
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 10 may 2022
  *
  * @param GDTFPath  Path of the GDTF file on disk
@@ -169,7 +169,7 @@ UObject* FCPGDTFImporterUtils::Import3DModel(FString GDTFPath, FString AssetName
 
 /**
  * Try to find the Asset in the Content Browser
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 10 may 2022
  *
  * @param AssetName Name of the imported Asset
@@ -188,7 +188,7 @@ UObject* FCPGDTFImporterUtils::IsAssetExisting(FString AssetName, FString PathOn
 
 /**
  * Create the package on a subfolder for an imported asset
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 10 may 2022
  *
  * @param AssetName Name of the imported Asset
@@ -209,7 +209,7 @@ UPackage* FCPGDTFImporterUtils::PreparePackageOnSubFolder(FString AssetName, FSt
 
 /**
  * Create the package for an imported asset
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 10 may 2022
  *
  * @param AssetName Name of the imported Asset
@@ -230,7 +230,7 @@ UPackage* FCPGDTFImporterUtils::PreparePackage(FString AssetName, FString PathOn
 
 /**
  * Load all meshes from a folder on ContentBrowser.
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 27 may 2022
  * 
  * @param ContentBrowserFolderPath Path to look for meshes
@@ -258,7 +258,7 @@ TArray<UStaticMesh*> FCPGDTFImporterUtils::LoadMeshesInFolder(FString ContentBro
 
 /**
  * Load a generic GDTF mesh.
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 01 june 2022
  *
  * @param Type Type of the mesh to load
@@ -279,7 +279,7 @@ UStaticMesh* FCPGDTFImporterUtils::LoadGDTFGenericMesh(ECPGDTFDescriptionModelsP
 
 /**
  * Load an Asset stored in Content Browser.
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 08 june 2022
  *
  * @param Path Path of the Asset
@@ -293,7 +293,7 @@ UObject* FCPGDTFImporterUtils::LoadObjectByPath(FString Path) {
 
 /**
  * Convert a GDTF "Position" to an Unreal FRotator.
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 24 may 2022
  *
  * @param InMatrix      Matrix to convert
@@ -329,7 +329,7 @@ double FCPGDTFImporterUtils::NearestPowerOfTwo(double N) {
 
 /**
  * Send notification to the UI
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 07 september 2022
  *
  * @param Title Title of the notification

@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,9 +31,9 @@ UCPGDTFSubstractiveColorSourceFixtureComponent::UCPGDTFSubstractiveColorSourceFi
 	this->bUseInterpolation = false; // No interpolation here
 };
 
-void UCPGDTFSubstractiveColorSourceFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables) {
+bool UCPGDTFSubstractiveColorSourceFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables, int attributeIndex) {
 
-	Super::Setup(AttachedGeometryNamee, InputsAvailables);
+	Super::Setup(AttachedGeometryNamee, InputsAvailables, attributeIndex);
 	
 	for (FDMXImportGDTFDMXChannel Channel : InputsAvailables) {
 		
@@ -64,6 +64,7 @@ void UCPGDTFSubstractiveColorSourceFixtureComponent::Setup(FName AttachedGeometr
 			break;
 		}
 	}
+	return true;
 }
 
 void UCPGDTFSubstractiveColorSourceFixtureComponent::PushNormalizedRawValues(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedRawDMXValueMap& RawValuesMap) {
@@ -77,7 +78,7 @@ void UCPGDTFSubstractiveColorSourceFixtureComponent::PushNormalizedRawValues(UDM
 	for (FCPDMXColorChannelData* DMXChannel : DMXChannels) {
 
 		if (DMXChannel->IsAddressValid()) {
-			const float* TargetValuePtr = RawValuesMap.Map.Find(DMXChannel->Address);
+			const float* TargetValuePtr = RawValuesMap.Map.Find(DMXChannel->address);
 			if (TargetValuePtr) {
 				const float RemappedValue = FMath::Max(0.0f, FMath::Min(1.0f, *TargetValuePtr));
 
@@ -109,4 +110,26 @@ void UCPGDTFSubstractiveColorSourceFixtureComponent::PushNormalizedRawValues(UDM
 	}
 
 	this->CurrentColor = FilterColor;
+}
+
+TArray<TSet<ECPGDTFAttributeType>> UCPGDTFSubstractiveColorSourceFixtureComponent::getAttributeGroups() {
+	TArray<TSet<ECPGDTFAttributeType>> ret;
+	return ret;
+}
+
+float UCPGDTFSubstractiveColorSourceFixtureComponent::getDefaultRealFade(FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.0958 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFSubstractiveColorSourceFixtureComponent::getDefaultRealAcceleration(FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.0292 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFSubstractiveColorSourceFixtureComponent::getDefaultFadeRatio(float realAcceleration, FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 1.2857 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFSubstractiveColorSourceFixtureComponent::getDefaultAccelerationRatio(float realFade, FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.3043 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
 }

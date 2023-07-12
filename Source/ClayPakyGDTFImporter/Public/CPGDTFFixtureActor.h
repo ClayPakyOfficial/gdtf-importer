@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -60,6 +60,7 @@ protected:
 
 public:
 
+	//@param FixturePackagePath Path of the package (folder) containing the fixture assets. For example: "/Game/ClayPaky_MiniB"
 	ACPGDTFFixtureActor();
 
 	//~ Begin AActor Interface
@@ -77,21 +78,36 @@ public:
 		UCPGDTFDescription* GDTFDescription;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Internal)
+		FString CurrentModeName;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Internal)
 		int CurrentModeIndex;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Internal)
-		FString FixturePathInContentBrowser;
+		FString ActorsPathInContentBrowser; //Folder inside FixturePathInContentBrowser that contains an actor for each dmx mode of the fixture
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Internal)
+		FString FixturePathInContentBrowser; //Base folder of the fixture
+
+	FString getClassNameFromMode(FString modeName); //Returns the name of the class of this same fixture, but with the specified mode name
 
 	/**
 	 * Setup the actor for a specific GDTFDescription.
 	 * Used during the generation of the Asset by the GDTFFactory.
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 25 may 2022
 	 *
 	 * @param FixtureGDTFDescription GDTF Description of the Fixture
-	 * @param FixturePackagePath Path of the package (folder) containing the fixture assets. For example: "/Game/ClayPaky_MiniB"
 	 */
-	void PreConstruct(UCPGDTFDescription* FixtureGDTFDescription, FString FixturePackagePath);
+	void PreConstruct(UCPGDTFDescription* FixtureGDTFDescription);
+
+	/**
+	 * Creates the rendering pipeline for each mode of the specified fixture. At the end of this process the DMX components will be cleared. This should be called before constructing the geometry tree
+	 * @author Luca Sorace - Clay Paky S.R.L.
+	 * @date 22 may 2023
+	 *
+	 * @param FixtureGDTFDescription GDTF Description of the Fixture
+	 */
+	void CreateRenderingPipelines(UCPGDTFDescription* FixtureGDTFDescription);
 
 	/*******************************************************
 	 *                   END OF C++ ONLY                   *
@@ -163,7 +179,15 @@ public:
 
 	/// Sets a new spotlight intensity scale
 	UFUNCTION(BlueprintCallable, Category = "DMX Fixture")
-		void SetSpotlightIntensityScale(float NewSpotlightIntensityScale);
+		void SetSpotlightLightIntensityScale(float NewSpotlightIntensityScale);
+
+	/// Sets a new spotlight intensity scale
+	UFUNCTION(BlueprintCallable, Category = "DMX Fixture")
+		void SetSpotlightBeamIntensityScale(float NewSpotlightIntensityScale);
+
+	/// Sets a new spotlight intensity scale
+	UFUNCTION(BlueprintCallable, Category = "DMX Fixture")
+		void SetSpotlightLensIntensityScale(float NewSpotlightIntensityScale);
 
 	/// Sets a new pointlight intensity scale
 	UFUNCTION(BlueprintCallable, Category = "DMX Fixture")

@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,25 +25,49 @@ SOFTWARE.
 
 #include "Components/DMXComponents/SimpleAttribute/CPGDTFZoomFixtureComponent.h"
 
-void UCPGDTFZoomFixtureComponent::InterpolateComponent(float DeltaSeconds) {
-
-	if (this->AttachedBeams.Num() < 1) return;
-
-	Super::InterpolateComponent(DeltaSeconds);
+bool UCPGDTFZoomFixtureComponent::Setup(FDMXImportGDTFDMXChannel DMXChannell, int attributeIndex) {
+	mMainAttributes.Add(ECPGDTFAttributeType::Zoom);
+	mMainAttributes.Add(ECPGDTFAttributeType::ZoomModeBeam);
+	mMainAttributes.Add(ECPGDTFAttributeType::ZoomModeSpot);
+	Super::Setup(DMXChannell, attributeIndex);
+	this->bUseInterpolation = true;
+	return true;
 }
 
-void UCPGDTFZoomFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float Angle) {
+void UCPGDTFZoomFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float Angle, int interpolationId) {
 
 	if (Beam == nullptr) return;
 
 	float HalfAngle = Angle / 2.0f; // / 2.0 because the angle in Unreal is between the center and the border of the beam
-
-	if (Beam->DynamicMaterialBeam) Beam->DynamicMaterialBeam->SetScalarParameterValue("DMX Zoom", HalfAngle);
-	if (Beam->DynamicMaterialLens) Beam->DynamicMaterialLens->SetScalarParameterValue("DMX Zoom", HalfAngle);
-	if (Beam->DynamicMaterialPointLight) Beam->DynamicMaterialPointLight->SetScalarParameterValue("DMX Zoom", HalfAngle);
-	if (Beam->DynamicMaterialSpotLight) Beam->DynamicMaterialSpotLight->SetScalarParameterValue("DMX Zoom", HalfAngle);
-	if (Beam->SpotLight) {
-		Beam->SpotLight->SetOuterConeAngle(HalfAngle);
-		Beam->SpotLight->SetInnerConeAngle(HalfAngle * 0.85f); /// TODO \todo Find something on GDTF to be more accurate
+	
+	setAllScalarParameters(Beam, "DMX Zoom", HalfAngle);
+	if (Beam->SpotLightR) {
+		Beam->SpotLightR->SetOuterConeAngle(HalfAngle);
+		Beam->SpotLightR->SetInnerConeAngle(HalfAngle * 0.85f); /// TODO \todo Find something on GDTF to be more accurate
 	}
+	if (Beam->SpotLightG) {
+		Beam->SpotLightG->SetOuterConeAngle(HalfAngle);
+		Beam->SpotLightG->SetInnerConeAngle(HalfAngle * 0.85f); /// TODO \todo Find something on GDTF to be more accurate
+	}
+	if (Beam->SpotLightB) {
+		Beam->SpotLightB->SetOuterConeAngle(HalfAngle);
+		Beam->SpotLightB->SetInnerConeAngle(HalfAngle * 0.85f); /// TODO \todo Find something on GDTF to be more accurate
+	}
+}
+
+float UCPGDTFZoomFixtureComponent::getDefaultRealFade(FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.4292 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFZoomFixtureComponent::getDefaultRealAcceleration(FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.0667 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFZoomFixtureComponent::getDefaultFadeRatio(float realAcceleration, FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 4.4375 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFZoomFixtureComponent::getDefaultAccelerationRatio(float realFade, FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[1] = { 0.1553 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
 }

@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -69,15 +69,16 @@ public:
 
 	/**
 	 * Setup the component for a specific GDTF Beam Description
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes, Luca Sorace - Clay Paky S.R.L.
      * @date 08 june 2022
 	 * 
 	 * @param BeamDescription Description of the Beam to construct
 	 * @param Model Model linked to this beam if any on GDTF file (represent Lens mesh)
 	 * @param FixturePathOnContentBrowser Path of the fixture in Content Browser (ex: "/Game/MyMovingHead")
+	 * @param gdtfDescription GDTF description of the fixture we're importing
 	 * @return True if everything OK.
 	*/
-	bool PreConstruct(UCPGDTFDescriptionGeometryBeam* BeamDescription, FCPGDTFDescriptionModel* Model, FString FixturePathOnContentBrowser);
+	bool PreConstruct(UCPGDTFDescriptionGeometryBeam* BeamDescription, FCPGDTFDescriptionModel* Model, FString FixturePathOnContentBrowser, UCPGDTFDescription* gdtfDescription, TArray<UActorComponent*> components, int selectedMode);
 
 	/*********************************
 	 *        BP Accessible          *
@@ -162,21 +163,55 @@ public:
 	 *********************************/
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, AdvancedDisplay, Category = "DMX Light Fixture Beam Components")
-		class USpotLightComponent* SpotLight;
+		class USpotLightComponent* SpotLight; //Added for compatibility reasons
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, AdvancedDisplay, Category = "DMX Light Fixture Beam Components")
+		class USpotLightComponent* SpotLightR;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, AdvancedDisplay, Category = "DMX Light Fixture Beam Components")
+		class USpotLightComponent* SpotLightG;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, AdvancedDisplay, Category = "DMX Light Fixture Beam Components")
+		class USpotLightComponent* SpotLightB;
 
 	UPROPERTY(EditAnywhere, AdvancedDisplay, Category = "DMX Light Fixture Beam Components")
-		class UMaterialInstance* SpotLightMaterialInstance;
+		class UMaterialInstance* SpotLightMaterialInstance;; //Added for compatibility reasons
+	UPROPERTY(EditAnywhere, AdvancedDisplay, Category = "DMX Light Fixture Beam Components")
+		class UMaterialInstance* SpotLightMaterialInstanceR;
+	UPROPERTY(EditAnywhere, AdvancedDisplay, Category = "DMX Light Fixture Beam Components")
+		class UMaterialInstance* SpotLightMaterialInstanceG;
+	UPROPERTY(EditAnywhere, AdvancedDisplay, Category = "DMX Light Fixture Beam Components")
+		class UMaterialInstance* SpotLightMaterialInstanceB;
 
 	UPROPERTY(BlueprintReadOnly, Category = "DMX Light Fixture Beam Components")
-		class UMaterialInstanceDynamic* DynamicMaterialSpotLight;
+		class UMaterialInstanceDynamic* DynamicMaterialSpotLight;; //Added for compatibility reasons
+	UPROPERTY(BlueprintReadOnly, Category = "DMX Light Fixture Beam Components")
+		class UMaterialInstanceDynamic* DynamicMaterialSpotLightR;
+	UPROPERTY(BlueprintReadOnly, Category = "DMX Light Fixture Beam Components")
+		class UMaterialInstanceDynamic* DynamicMaterialSpotLightG;
+	UPROPERTY(BlueprintReadOnly, Category = "DMX Light Fixture Beam Components")
+		class UMaterialInstanceDynamic* DynamicMaterialSpotLightB;
 
-	/// Scales spotlight intensity
-	UPROPERTY(EditAnywhere, BlueprintSetter = SetSpotlightIntensityScale, Category = "DMX Light Fixture Beam Components")
-		float SpotlightIntensityScale;
+	/// Scales spotlight light intensity
+	UPROPERTY(EditAnywhere, BlueprintSetter = SetSpotlightLightIntensityScale, Category = "DMX Light Fixture Beam Components")
+		float SpotlightLightIntensityScale;
 
-	/// Sets a new spotlight intensity scale
+	/// Sets a new spotlight light intensity scale
 	UFUNCTION(BlueprintCallable, Category = "DMX Light Fixture Beam Components")
-		void SetSpotlightIntensityScale(float NewSpotlightIntensityScale);
+		void SetSpotlightLightIntensityScale(float NewSpotlightIntensityScale);
+
+	/// Scales spotlight beam intensity
+	UPROPERTY(EditAnywhere, BlueprintSetter = SetSpotlightBeamIntensityScale, Category = "DMX Light Fixture Beam Components")
+		float SpotlightBeamIntensityScale;
+
+	/// Sets a new spotlight beam intensity scale
+	UFUNCTION(BlueprintCallable, Category = "DMX Light Fixture Beam Components")
+		void SetSpotlightBeamIntensityScale(float NewSpotlightIntensityScale);
+
+	/// Scales spotlight lens intensity
+	UPROPERTY(EditAnywhere, BlueprintSetter = SetSpotlightLensIntensityScale, Category = "DMX Light Fixture Beam Components")
+		float SpotlightLensIntensityScale;
+
+	/// Sets a new spotlight lens intensity scale
+	UFUNCTION(BlueprintCallable, Category = "DMX Light Fixture Beam Components")
+		void SetSpotlightLensIntensityScale(float NewSpotlightIntensityScale);
 
 	/*********************************
 	 *          PointLight           *

@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ SOFTWARE.
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/DMXComponents/CPGDTFSimpleAttributeBeamFixtureComponent.h"
+#include "Components/DMXComponents/CPGDTFSimpleAttributeFixtureComponent.h"
 #include "CPGDTFZoomFixtureComponent.generated.h"
 
 
@@ -36,20 +36,24 @@ SOFTWARE.
 /// \cond NOT_DOXYGEN
 UCLASS(ClassGroup = (DMX), Meta = (BlueprintSpawnableComponent, DisplayName = "Zoom Component", RestrictedToClasses = "ACPGDTFFixtureActor"), HideCategories = ("Variable", "Sockets", "Tags", "Activation", "Cooking", "ComponentReplication", "AssetUserData", "Collision", "Events"))
 /// \endcond
-class CLAYPAKYGDTFIMPORTER_API UCPGDTFZoomFixtureComponent : public UCPGDTFSimpleAttributeBeamFixtureComponent {
+class CLAYPAKYGDTFIMPORTER_API UCPGDTFZoomFixtureComponent : public UCPGDTFSimpleAttributeFixtureComponent {
 
 	GENERATED_BODY()
 
 public:
 	UCPGDTFZoomFixtureComponent() {};
 
-	void InterpolateComponent(float DeltaSeconds) override;
+	virtual bool Setup(FDMXImportGDTFDMXChannel DMXChannell, int attributeIndex) override;
 
 	  /*******************************************/
 	 /*           Component Specific            */
 	/*******************************************/
 
 protected:
+	virtual float getDefaultRealAcceleration(FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultRealFade(FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultAccelerationRatio(float realFade, FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultFadeRatio(float realAcceleration, FCPDMXChannelData& channelData, int interpolationId) override;
 
-	void SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float Angle) override;
+	void SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float Angle, int interpolationId) override;
 };

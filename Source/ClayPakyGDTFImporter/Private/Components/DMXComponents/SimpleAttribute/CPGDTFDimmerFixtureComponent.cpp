@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,24 +25,18 @@ SOFTWARE.
 
 #include "Components/DMXComponents/SimpleAttribute/CPGDTFDimmerFixtureComponent.h"
 
+bool UCPGDTFDimmerFixtureComponent::Setup(FDMXImportGDTFDMXChannel DMXChannell, int attributeIndex) {
+	mMainAttributes.Add(ECPGDTFAttributeType::Dimmer);
+	Super::Setup(DMXChannell, attributeIndex);
+	return true;
+}
+
 void UCPGDTFDimmerFixtureComponent::BeginPlay() {
 	Super::BeginPlay();
-	this->SetValueNoInterp(0.0f);
+	this->bUseInterpolation = false;
+	this->SetValueNoInterp(0.0f, 0, true);
 }
 
-void UCPGDTFDimmerFixtureComponent::InterpolateComponent(float DeltaSeconds) {
-
-	if (this->AttachedBeams.Num() < 1) return;
-
-	Super::InterpolateComponent(DeltaSeconds);
-}
-
-void UCPGDTFDimmerFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float Intensity) {
-
-	if (Beam == nullptr) return;
-
-	if (Beam->DynamicMaterialBeam) Beam->DynamicMaterialBeam->SetScalarParameterValue("DMX Dimmer", Intensity);
-	if (Beam->DynamicMaterialLens) Beam->DynamicMaterialLens->SetScalarParameterValue("DMX Dimmer", Intensity);
-	if (Beam->DynamicMaterialPointLight) Beam->DynamicMaterialPointLight->SetScalarParameterValue("DMX Dimmer", Intensity);
-	if (Beam->DynamicMaterialSpotLight) Beam->DynamicMaterialSpotLight->SetScalarParameterValue("DMX Dimmer", Intensity / 4.5f); // / 4.5 to avoid a white sur-exposed effect
+void UCPGDTFDimmerFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float Intensity, int interpolationId) {
+	setAllScalarParameters(Beam, TEXT("DMX Dimmer"), Intensity);
 }

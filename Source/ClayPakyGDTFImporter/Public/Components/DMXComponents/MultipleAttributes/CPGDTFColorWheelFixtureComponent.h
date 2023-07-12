@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,13 +25,14 @@ SOFTWARE.
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GenericPlatform/GenericPlatformMath.h"
+#include "Factories/CPGDTFRenderPipelineBuilder.h"
 #include "Components/DMXComponents/CPGDTFSubstractiveColorFixtureComponent.h"
 #include "CPGDTFColorWheelFixtureComponent.generated.h"
 
 /**
  * Component to manage (Virtual) ColorWheels
  * 
- * TODO \todo Support of multiple DMX Channels
  * 
  * TODO \todo Add support of missing attributes :
  * Color(n)WheelAudio // Very complex to implement.
@@ -47,16 +48,11 @@ class CLAYPAKYGDTFIMPORTER_API UCPGDTFColorWheelFixtureComponent : public UCPGDT
 	GENERATED_BODY()
 
 protected:
-
-	ECPGDTFAttributeType RunningEffectType = ECPGDTFAttributeType::Color_n_;
-
-	FDMXChannelTree DMXChannelTree;
-
-	UPROPERTY()
-	FDMXImportGDTFDMXChannel GDTFDMXChannelDescription;
-
 	UPROPERTY()
 	UTexture2D* WheelTexture;
+
+	UPROPERTY()
+	UTexture2D* WheelTextureFrosted;
 
 	UPROPERTY()
 	TArray<FLinearColor> WheelColors;
@@ -64,48 +60,40 @@ protected:
 	/// Used to know if this color wheel needs to overwrite any other color component
 	bool bIsMacroColor;
 
+	//Param name inside the materials that controls the index of the gobo wheel
+	UPROPERTY(BlueprintReadOnly)
+	FName mIndexParamName;
+
 	//Specific for effects interpolation
 
 	float ColorWheelPeriod;
 	float CurrentTime;
-	FChannelInterpolation CurrentWheelIndex;
 
 public:
 	UCPGDTFColorWheelFixtureComponent() {};
 
-	void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels) override;
+	bool Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) override;
 
-	void BeginPlay();
-	//void OnConstruction() override;
+	void BeginPlay() override;
 
 	  /*******************************************/
 	 /*               DMX Related               */
 	/*******************************************/
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0", ClampMax = "512"), Category = "DMX Channels")
-		int32 ChannelAddress;
-
-	/// Pushes DMX Values to the Component. Expects normalized values in the range of 0.0f - 1.0f
-	virtual void PushDMXRawValues(UDMXEntityFixturePatch* FixturePatch, const TMap<int32, int32>& RawValuesMap) override;
-
-	void SetTargetValue(float WheelIndex);
-
 	/**
 	 * Read DMXValue and apply the effect to the Beam
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 18 july 2022
 	 * 
 	 * @param DMXValue 
 	*/
-	void ApplyEffectToBeam(int32 DMXValue);
+	void ApplyEffectToBeam(int32 DMXValue, FCPComponentChannelData& channel, TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*>& DMXBehaviour, ECPGDTFAttributeType& AttributeType, float physicalValue) override;
 
-	void InterpolateComponent(float DeltaSeconds) override;
+	void InterpolateComponent_BeamInternal(float deltaSeconds, FCPComponentChannelData& channel) override;
 
 	  /*******************************************/
 	 /*           Component Specific            */
 	/*******************************************/
-
-	FLinearColor GetCurrentColor() { return this->CurrentColor; };
 
 	bool IsMacroColor() { return this->bIsMacroColor; };
 
@@ -113,21 +101,29 @@ protected:
 
 	/**
 	 * Apply a color to the light entire output
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 18 july 2022
 	 * 
 	 * @param Beam 
 	 * @param WheelIndex 
 	 */
-	void SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float WheelIndex) override;
+	void SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float WheelIndex, int interpolationId) override;
 
 	/**
 	 * Apply a color to the light output overwriting other color components values.
 	 * Used for color macros and virtual color wheels
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 04 august 2022
 	 * 
 	 * @param WheelIndex 
 	 */
 	void SetValueNoInterp_OverWrite(float WheelIndex);
+
+	TArray<TSet<ECPGDTFAttributeType>> getAttributeGroups() override;
+
+	virtual float getDefaultRealAcceleration(FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultRealFade(FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultAccelerationRatio(float realFade, FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultFadeRatio(float realAcceleration, FCPDMXChannelData& channelData, int interpolationId) override;
+
 };

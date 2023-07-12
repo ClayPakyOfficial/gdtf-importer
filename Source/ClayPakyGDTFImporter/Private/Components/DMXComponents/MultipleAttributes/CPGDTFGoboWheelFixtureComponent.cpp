@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,220 +22,206 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+#define ENABLE_OLD_RENDER
 
 #include "Components/DMXComponents/MultipleAttributes/CPGDTFGoboWheelFixtureComponent.h"
 #include "Utils/CPGDTFImporterUtils.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "PackageTools.h"
 
-void UCPGDTFGoboWheelFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels) {
+bool UCPGDTFGoboWheelFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
+	Super::Setup(AttachedGeometryNamee, DMXChannels, attributeIndex);
 
-	Super::Setup(AttachedGeometryNamee, DMXChannels);
-	if (DMXChannels[0].Offset.Num() > 0) this->AddressChannelOne = DMXChannels[0].Offset[0];
-	else this->AddressChannelOne = -1;
-	this->GDTFDMXChannelDescriptionOne = DMXChannels[0];
-	this->DMXChannelTreeOne.Insert(this->GDTFDMXChannelDescriptionOne.LogicalChannels[0], this->GDTFDMXChannelDescriptionOne.Offset.Num());
-
-	if (DMXChannels.Num() > 1) {
-		if (DMXChannels[1].Offset.Num() > 0) this->AddressChannelTwo = DMXChannels[1].Offset[0];
-		else this->AddressChannelTwo = -1;
-		this->GDTFDMXChannelDescriptionTwo = DMXChannels[1];
-		this->DMXChannelTreeTwo.Insert(this->GDTFDMXChannelDescriptionTwo.LogicalChannels[0], this->GDTFDMXChannelDescriptionTwo.Offset.Num());
-	}
-
-	FDMXImportGDTFWheel Wheel = this->GDTFDMXChannelDescriptionOne.LogicalChannels[0].ChannelFunctions[0].Wheel;
-	FString TextureLoadPath = this->GetParentFixtureActor()->GDTFDescription->GetFixtureSavePath();
+	FDMXImportGDTFWheel Wheel;
+	findWheelObject(Wheel);
+	FString TextureLoadPath = this->GetParentFixtureActor()->FixturePathInContentBrowser;
 	FString TextureLoadPathFrosted = TextureLoadPath;
 	FString SanitizedWheelName = UPackageTools::SanitizePackageName(Wheel.Name.ToString());
-	TextureLoadPath.Append("textures/" + SanitizedWheelName + "/Wheel_" + SanitizedWheelName + ".Wheel_" + SanitizedWheelName);
-	TextureLoadPathFrosted.Append("textures/" + SanitizedWheelName + "/Wheel_" + SanitizedWheelName + "_Frosted.Wheel_" + SanitizedWheelName + "_Frosted");
+	TextureLoadPath.Append("/textures/" + SanitizedWheelName + "/Wheel_" + SanitizedWheelName + ".Wheel_" + SanitizedWheelName);
+	TextureLoadPathFrosted.Append("/textures/" + SanitizedWheelName + "/Wheel_" + SanitizedWheelName + "_Frosted.Wheel_" + SanitizedWheelName + "_Frosted");
 	this->WheelTexture = Cast<UTexture2D>(FCPGDTFImporterUtils::LoadObjectByPath(TextureLoadPath));
 	this->WheelTextureFrosted = Cast<UTexture2D>(FCPGDTFImporterUtils::LoadObjectByPath(TextureLoadPathFrosted));
 	this->NbrGobos = Wheel.Slots.Num();
-
-	this->InterpolationScale = 0.25f;
 	this->bIsRawDMXEnabled = true;
+
+	return true;
 }
 
 void UCPGDTFGoboWheelFixtureComponent::BeginPlay() {
+	this->mIndexParamName = *CPGDTFRenderPipelineBuilder::getIndexParamName(FCPGDTFWheelImporter::WheelType::Gobo, this->mAttributeIndexNo);
+	UE_LOG_CPGDTFIMPORTER(Display, TEXT("UCPGDTFGoboWheelFixtureComponent::Setup: mIndexParamName: '%s'"), *this->mIndexParamName.ToString());
 
-	Super::BeginPlay();
+	TArray<FCPDMXChannelData> data;
+	FCPDMXChannelData goboRotData = *this->attributesData.getChannelData(ECPGDTFAttributeType::Gobo_n_Pos);
+	FCPDMXChannelData wheelRotData = *this->attributesData.getChannelData(ECPGDTFAttributeType::Gobo_n_WheelIndex);
+	wheelRotData.MinValue = 0;
+	wheelRotData.MaxValue = NbrGobos;
+	data.Add(goboRotData);
+	data.Add(wheelRotData);
+	Super::BeginPlay(data);
+	this->interpolations[InterpolationIds::WHEEL_ROTATION].bSpeedCapEnabled = false;
+	this->interpolations[InterpolationIds::GOBO_ROTATION].bSpeedCapEnabled = false;
+
 	for (UCPGDTFBeamSceneComponent* Beam : this->AttachedBeams) {
 
 		if (!Beam->HasBegunPlay()) Beam->BeginPlay(); // To avoid a skip of gobos disk
 
-		if (Beam->DynamicMaterialBeam) {
-			Beam->DynamicMaterialBeam->SetTextureParameterValue("DMX Gobo Disk", this->WheelTexture);
-			Beam->DynamicMaterialBeam->SetTextureParameterValue("DMX Gobo Disk Frosted", this->WheelTextureFrosted);
-			Beam->DynamicMaterialBeam->SetScalarParameterValue("DMX Gobo Num Mask", this->NbrGobos);
-		}
-		if (Beam->DynamicMaterialLens) {
-			Beam->DynamicMaterialLens->SetTextureParameterValue("DMX Gobo Disk", this->WheelTexture);
-			Beam->DynamicMaterialLens->SetTextureParameterValue("DMX Gobo Disk Frosted", this->WheelTextureFrosted);
-			Beam->DynamicMaterialLens->SetScalarParameterValue("DMX Gobo Num Mask", this->NbrGobos);
-		}
-		if (Beam->DynamicMaterialSpotLight) {
-			Beam->DynamicMaterialSpotLight->SetTextureParameterValue("DMX Gobo Disk", this->WheelTexture);
-			Beam->DynamicMaterialSpotLight->SetTextureParameterValue("DMX Gobo Disk Frosted", this->WheelTextureFrosted);
-			Beam->DynamicMaterialSpotLight->SetScalarParameterValue("DMX Gobo Num Mask", this->NbrGobos);
-		}
+		FName diskName = *CPGDTFRenderPipelineBuilder::getDiskParamName(FCPGDTFWheelImporter::WheelType::Gobo, false, this->mAttributeIndexNo);
+		FName diskFrostedName = *CPGDTFRenderPipelineBuilder::getDiskParamName(FCPGDTFWheelImporter::WheelType::Gobo, true, this->mAttributeIndexNo);
+		FName numSlot = *CPGDTFRenderPipelineBuilder::getNumSlotsParamName(FCPGDTFWheelImporter::WheelType::Gobo, this->mAttributeIndexNo);
+
+		UE_LOG_CPGDTFIMPORTER(Display, TEXT("UCPGDTFGoboWheelFixtureComponent::BeginPlay: Got params names. Disk: '%s'\t Frosted: '%s'\t Num: '%s'"), *diskName.ToString(), *diskFrostedName.ToString(), *numSlot.ToString());
+
+		setAllTextureParameters(Beam, diskName, this->WheelTexture);
+		setAllTextureParameters(Beam, diskFrostedName, this->WheelTextureFrosted);
+		setAllScalarParameters(Beam, numSlot, this->NbrGobos);
+		#ifdef ENABLE_OLD_RENDER //Keeping them for test old lights
+			setAllTextureParameters(Beam, "DMX Gobo Disk", this->WheelTexture);
+			setAllTextureParameters(Beam, "DMX Gobo Disk Frosted", this->WheelTextureFrosted);
+			setAllScalarParameters(Beam, "DMX Gobo Num Mask", this->NbrGobos);
+		#endif
 	}
 
-	this->CurrentWheelIndex = FChannelInterpolation();
-	this->CurrentWheelIndex.InterpolationScale = this->InterpolationScale;
-	this->CurrentWheelIndex.RangeSize = this->NbrGobos;
-	this->CurrentWheelIndex.CurrentValue = 0;
-	this->CurrentWheelIndex.TargetValue = 0;
-	this->CurrentWheelIndex.StartTravel(0);
-
-	if (this->DMXChannelTreeOne.IsEmpty()) this->DMXChannelTreeOne.Insert(this->GDTFDMXChannelDescriptionOne.LogicalChannels[0], this->GDTFDMXChannelDescriptionOne.Offset.Num());
-	if (this->DMXChannelTreeTwo.IsEmpty() && this->GDTFDMXChannelDescriptionTwo.LogicalChannels.Num() > 0) this->DMXChannelTreeTwo.Insert(this->GDTFDMXChannelDescriptionTwo.LogicalChannels[0], this->GDTFDMXChannelDescriptionTwo.Offset.Num());
+	
 	this->bIsRawDMXEnabled = true; // Just to make sure
 	this->bUseInterpolation = true;
 }
 
-void UCPGDTFGoboWheelFixtureComponent::PushDMXRawValues(UDMXEntityFixturePatch* FixturePatch, const TMap<int32, int32>& RawValuesMap) {
+TArray<TSet<ECPGDTFAttributeType>> UCPGDTFGoboWheelFixtureComponent::getAttributeGroups() {
+	TArray<TSet<ECPGDTFAttributeType>> attributes;
 
-	const int32* DMXValuePtrOne = RawValuesMap.Find(this->AddressChannelOne);
-	if (DMXValuePtrOne) this->ApplyEffectToBeam(*DMXValuePtrOne, true);
-	const int32* DMXValuePtrTwo = RawValuesMap.Find(this->AddressChannelTwo);
-	if (DMXValuePtrTwo) this->ApplyEffectToBeam(*DMXValuePtrTwo, false);
+	TSet<ECPGDTFAttributeType> goboIndex;
+	goboIndex.Add(ECPGDTFAttributeType::Gobo_n_);
+	goboIndex.Add(ECPGDTFAttributeType::Gobo_n_WheelIndex);
+	attributes.Add(goboIndex);
+
+	TSet<ECPGDTFAttributeType> goboPos;
+	goboPos.Add(ECPGDTFAttributeType::Gobo_n_Pos);
+	attributes.Add(goboPos);
+
+	TSet<ECPGDTFAttributeType> goboPosRot;
+	goboPosRot.Add(ECPGDTFAttributeType::Gobo_n_PosRotate);
+	attributes.Add(goboPosRot);
+
+	TSet<ECPGDTFAttributeType> goboSpin;
+	goboSpin.Add(ECPGDTFAttributeType::Gobo_n_WheelSpin);
+	goboSpin.Add(ECPGDTFAttributeType::Gobo_n_SelectSpin);
+	attributes.Add(goboSpin);
+
+	TSet<ECPGDTFAttributeType> goboShake;
+	goboShake.Add(ECPGDTFAttributeType::Gobo_n_WheelShake);
+	goboShake.Add(ECPGDTFAttributeType::Gobo_n_SelectShake);
+	goboShake.Add(ECPGDTFAttributeType::Gobo_n_PosShake);
+	attributes.Add(goboShake);
+
+	TSet<ECPGDTFAttributeType> goboRandom;
+	goboRandom.Add(ECPGDTFAttributeType::Gobo_n_WheelRandom);
+	attributes.Add(goboRandom);
+
+	TSet<ECPGDTFAttributeType> goboAudio;
+	goboAudio.Add(ECPGDTFAttributeType::Gobo_n_WheelAudio);
+	attributes.Add(goboAudio);
+
+	return attributes;
 }
 
-void UCPGDTFGoboWheelFixtureComponent::SetTargetValue(float WheelIndex) {
-
-	if (this->HasBegunPlay()) {
-		if (this->bUseInterpolation) {
-			if (this->CurrentWheelIndex.bFirstValueWasSet)
-				// Only 'Push' the next value into interpolation. BPs will read the resulting value on tick.
-				this->CurrentWheelIndex.Push(WheelIndex);
-			else {
-				// Jump to the first value if it never was set
-				this->CurrentWheelIndex.SetValueNoInterp(WheelIndex);
-				this->CurrentWheelIndex.bFirstValueWasSet = true;
-
-				SetValueNoInterp(WheelIndex);
-			}
-		} else {
-			this->CurrentWheelIndex.SetValueNoInterp(WheelIndex);
-			SetValueNoInterp(WheelIndex);
-		}
-	}
+float UCPGDTFGoboWheelFixtureComponent::getDefaultRealFade(FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[2] = { 0.4854, 0.4312 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFGoboWheelFixtureComponent::getDefaultRealAcceleration(FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[2] = { 0.1750, 0.0667 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFGoboWheelFixtureComponent::getDefaultFadeRatio(float realAcceleration, FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[2] = { 0.7738, 4.4688 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
+}
+float UCPGDTFGoboWheelFixtureComponent::getDefaultAccelerationRatio(float realFade, FCPDMXChannelData& channelData, int interpolationId) {
+	const float defaults[2] = { 0.3605, 0.1546 }; //This has to match InterpolationIds enum order!
+	return defaults[interpolationId];
 }
 
 /**
  * Read DMXValue and apply the effect to the Beam
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 27 july 2022
  *
  * @param DMXValue
  * @param IsFirstChannel
 */
-void UCPGDTFGoboWheelFixtureComponent::ApplyEffectToBeam(int32 DMXValue, bool IsFirstChannel) {
-
-	FDMXChannelTree DMXChannelTree;
-	ECPGDTFAttributeType* RunningEffectType;
-	if (IsFirstChannel) {
-		DMXChannelTree = this->DMXChannelTreeOne;
-		RunningEffectType = &this->RunningEffectTypeChannelOne;
-	} else {
-		DMXChannelTree = this->DMXChannelTreeTwo;
-		RunningEffectType = &this->RunningEffectTypeChannelTwo;
-	}
-
-	if (DMXChannelTree.IsEmpty()) return;
-
-	TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*> DMXBehaviour = DMXChannelTree.GetBehaviourByDMXValue(DMXValue);
-	// If we are unable to find the behaviour in the tree we can't do anything
-	if (DMXBehaviour.Key == nullptr || DMXBehaviour.Value == nullptr) return;
-
-	ECPGDTFAttributeType AttributeType = CPGDTFDescription::GetGDTFAttributeTypeValueFromString(DMXBehaviour.Key->Attribute.Name.ToString());
-	float PhysicalValue = UKismetMathLibrary::MapRangeClamped(DMXValue, DMXBehaviour.Value->DMXFrom.Value, DMXBehaviour.Value->DMXTo.Value, DMXBehaviour.Value->PhysicalFrom, DMXBehaviour.Value->PhysicalTo);
-
+void UCPGDTFGoboWheelFixtureComponent::ApplyEffectToBeam(int32 DMXValue, FCPComponentChannelData& channel, TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*>& DMXBehaviour, ECPGDTFAttributeType& AttributeType, float physicalValue) {
 	switch (AttributeType) {
 
-	case ECPGDTFAttributeType::Gobo_n_:
-	case ECPGDTFAttributeType::Gobo_n_WheelIndex: // Gobo selection
-		this->GoboWheelPeriod = 0;
-		this->WheelCurrentTime = 0;
-		this->SetTargetValue(PhysicalValue + (float)DMXBehaviour.Value->WheelSlotIndex);
-		break;
+		case ECPGDTFAttributeType::Gobo_n_:
+		case ECPGDTFAttributeType::Gobo_n_WheelIndex: // Gobo selection
+			this->GoboWheelPeriod = 0;
+			this->WheelCurrentTime = 0;
+			this->SetTargetValue(physicalValue + (float)DMXBehaviour.Value->WheelSlotIndex, InterpolationIds::WHEEL_ROTATION);
+			break;
+			
+		case ECPGDTFAttributeType::Gobo_n_Pos: // Gobo indexing
+			if (this->channels.Num() < 2) this->SetTargetValue((float)DMXBehaviour.Value->WheelSlotIndex, InterpolationIds::WHEEL_ROTATION); // If there is only one channel set the Gobo
+			this->SetTargetValue(physicalValue, InterpolationIds::GOBO_ROTATION); // Set the rotation
+			break;
 
-	case ECPGDTFAttributeType::Gobo_n_Pos: // Gobo indexing
-		if (this->AddressChannelTwo <= 0) this->SetValueNoInterp((float)DMXBehaviour.Value->WheelSlotIndex); // If there is only one channel set the Gobo
-		this->SetValueNoInterpGoboRotation(PhysicalValue); // Set the rotation
-		break;
+		case ECPGDTFAttributeType::Gobo_n_PosRotate: // Gobo rotation
+			if (this->channels.Num() < 2) this->SetTargetValue((float)DMXBehaviour.Value->WheelSlotIndex, InterpolationIds::WHEEL_ROTATION); // If there is only one channel set the Gobo
+			// We stop interpolation
+			this->interpolations[InterpolationIds::GOBO_ROTATION].EndInterpolation(false);
 
-	case ECPGDTFAttributeType::Gobo_n_PosRotate: // Gobo rotation
-		if (*RunningEffectType != AttributeType) this->RotationCurrentTime = 0;
-		if (PhysicalValue == 0) this->GoboRotationPeriod = 0;
-		else this->GoboRotationPeriod = 360 / PhysicalValue; // PhysicalValue is an Angular speed in deg/s
-		break;
+			if (channel.RunningEffectTypeChannel != AttributeType) this->RotationCurrentTime = 0;
+			if (physicalValue == 0) this->GoboRotationPeriod = 0;
+			else this->GoboRotationPeriod = 360 / physicalValue; // PhysicalValue is an Angular speed in deg/s
+			break;
 
-	case ECPGDTFAttributeType::Gobo_n_WheelSpin:
-	case ECPGDTFAttributeType::Gobo_n_SelectSpin: // Gobo wheel rotation
-		// We stop interpolation
-		this->CurrentWheelIndex.IsUpdating = false;
-		this->CurrentWheelIndex.TargetValue = this->CurrentWheelIndex.CurrentValue;
+		case ECPGDTFAttributeType::Gobo_n_WheelSpin:
+		case ECPGDTFAttributeType::Gobo_n_SelectSpin: // Gobo wheel rotation
+			// We stop interpolation
+			this->interpolations[InterpolationIds::GOBO_ROTATION].EndInterpolation(false);
 
-		if (*RunningEffectType != AttributeType) this->WheelCurrentTime = 0;
-		if (PhysicalValue == 0) this->GoboWheelPeriod = 0;
-		else this->GoboWheelPeriod = 360 / PhysicalValue; // PhysicalValue is an Angular speed in deg/s
-		break;
+			if (channel.RunningEffectTypeChannel != AttributeType) this->WheelCurrentTime = 0;
+			if (physicalValue == 0) this->GoboWheelPeriod = 0;
+			else this->GoboWheelPeriod = 360 / physicalValue; // PhysicalValue is an Angular speed in deg/s
+			break;
 
-	case ECPGDTFAttributeType::Gobo_n_WheelShake:
-	case ECPGDTFAttributeType::Gobo_n_SelectShake:
-	case ECPGDTFAttributeType::Gobo_n_PosShake: // Gobo shake
-		// We stop interpolation
-		this->CurrentWheelIndex.IsUpdating = false;
-		this->CurrentWheelIndex.TargetValue = this->CurrentWheelIndex.CurrentValue;
+		case ECPGDTFAttributeType::Gobo_n_WheelShake:
+		case ECPGDTFAttributeType::Gobo_n_SelectShake:
+		case ECPGDTFAttributeType::Gobo_n_PosShake: // Gobo shake
+			//if (this->channels.Num() < 2) this->SetTargetValue((float)DMXBehaviour.Value->WheelSlotIndex, InterpolationIds::WHEEL_ROTATION); // If there is only one channel set the Gobo
+			// We stop interpolation
+			this->interpolations[InterpolationIds::GOBO_ROTATION].EndInterpolation(false);
 
-		if (*RunningEffectType != AttributeType) this->WheelCurrentTime = 0;
-		if (PhysicalValue == 0) this->GoboWheelPeriod = 0;
-		else this->GoboWheelPeriod = 1 / PhysicalValue; // Physical value is a Frequency
-		this->ShakeBaseIndex = DMXBehaviour.Value->WheelSlotIndex;
-		break;
+			if (channel.RunningEffectTypeChannel != AttributeType) this->WheelCurrentTime = 0;
+			if (physicalValue == 0) this->GoboWheelPeriod = 0;
+			else this->GoboWheelPeriod = 1 / physicalValue; // Physical value is a Frequency
+			this->ShakeBaseIndex = DMXBehaviour.Value->WheelSlotIndex;
+			break;
 
-	case ECPGDTFAttributeType::Gobo_n_WheelRandom:
-		// Here the Physical value is a frenquency in Hz. If the GDTF use default physical values we fallback on default ones
-		if (DMXBehaviour.Value->PhysicalFrom == 0 && DMXBehaviour.Value->PhysicalTo == 1) this->GoboWheelPeriod = UKismetMathLibrary::MapRangeClamped(DMXValue, DMXBehaviour.Value->DMXFrom.Value, DMXBehaviour.Value->DMXTo.Value, 0.2, 5);
-		else this->GoboWheelPeriod = PhysicalValue;
-		break;
+		case ECPGDTFAttributeType::Gobo_n_WheelRandom:
+			// Here the Physical value is a frenquency in Hz. If the GDTF use default physical values we fallback on default ones
+			if (DMXBehaviour.Value->PhysicalFrom == 0 && DMXBehaviour.Value->PhysicalTo == 1) this->GoboWheelPeriod = UKismetMathLibrary::MapRangeClamped(DMXValue, DMXBehaviour.Value->DMXFrom.Value, DMXBehaviour.Value->DMXTo.Value, 0.2, 5);
+			else this->GoboWheelPeriod = physicalValue;
+			break;
 
-	case ECPGDTFAttributeType::Gobo_n_WheelAudio: // Very complex to implement. For now we disable ColorWheel
-	default:// Not supported behaviour
-		if (IsFirstChannel) {
-			if (DMXValue == this->GDTFDMXChannelDescriptionOne.Default.Value) this->SetTargetValue(0); // To avoid stack overflows
-			else this->ApplyEffectToBeam(this->GDTFDMXChannelDescriptionOne.Default.Value);
-		} else {
-			if (DMXValue == this->GDTFDMXChannelDescriptionTwo.Default.Value) break; // To avoid stack overflows
-			else this->ApplyEffectToBeam(this->GDTFDMXChannelDescriptionTwo.Default.Value);
-		}
-		break;
+		case ECPGDTFAttributeType::Gobo_n_WheelAudio: // Very complex to implement. For now we disable ColorWheel
+		default: break;// Not supported behaviour
 	}
-	*RunningEffectType = AttributeType;
 }
 
-void UCPGDTFGoboWheelFixtureComponent::InterpolateComponent(float DeltaSeconds) {
-
-	if (this->AttachedBeams.Num() < 1) return;
-
+void UCPGDTFGoboWheelFixtureComponent::InterpolateComponent_BeamInternal(float deltaSeconds, FCPComponentChannelData& channel) {
 	float WheelIndex;
 
-	for (int i = 0; i < 2; i++) {
-
-		ECPGDTFAttributeType RunningEffectType;
-		if (i == 0) RunningEffectType = this->RunningEffectTypeChannelOne;
-		else RunningEffectType = this->RunningEffectTypeChannelTwo;		
-
-		switch (RunningEffectType) {
-
+	switch (channel.RunningEffectTypeChannel) {
 		case ECPGDTFAttributeType::Gobo_n_PosRotate: // Gobo rotation
 
 			if (this->GoboRotationPeriod == 0) break;
 
-			WheelIndex = 360.0f * (DeltaSeconds / this->GoboRotationPeriod);
-			this->SetValueNoInterpGoboDeltaRotation(WheelIndex);
+			WheelIndex = this->interpolations[InterpolationIds::GOBO_ROTATION].getCurrentValue() + 360.0f * (deltaSeconds / this->GoboRotationPeriod);
+			WheelIndex = FMath::Fmod(WheelIndex, 360);
+			if (WheelIndex < 0)
+				WheelIndex += 360;
+			this->SetValueNoInterp(WheelIndex, InterpolationIds::GOBO_ROTATION);
 			break;
 
 		case ECPGDTFAttributeType::Gobo_n_WheelSpin:
@@ -243,14 +229,11 @@ void UCPGDTFGoboWheelFixtureComponent::InterpolateComponent(float DeltaSeconds) 
 
 			if (this->GoboWheelPeriod == 0) break;
 
-			WheelIndex = (this->CurrentWheelIndex.CurrentValue + this->NbrGobos * (DeltaSeconds / this->GoboWheelPeriod));
-			while (WheelIndex >= this->NbrGobos) {
-				WheelIndex -= this->NbrGobos;
-			}
-			while (WheelIndex <= 0) {
-				WheelIndex += NbrGobos;
-			}
-			this->SetValueNoInterp(WheelIndex);
+			WheelIndex = (this->interpolations[InterpolationIds::WHEEL_ROTATION].getCurrentValue() + this->NbrGobos * (deltaSeconds / this->GoboWheelPeriod));
+			WheelIndex = FMath::Fmod(WheelIndex, this->NbrGobos);
+			if (WheelIndex < 0)
+				WheelIndex += this->NbrGobos;
+			this->SetValueNoInterp(WheelIndex, InterpolationIds::WHEEL_ROTATION);
 			break;
 
 		case ECPGDTFAttributeType::Gobo_n_WheelShake:
@@ -259,78 +242,50 @@ void UCPGDTFGoboWheelFixtureComponent::InterpolateComponent(float DeltaSeconds) 
 
 			if (this->GoboWheelPeriod == 0) break;
 
-			this->WheelCurrentTime += DeltaSeconds;
-			this->SetValueNoInterp(this->ShakeBaseIndex + FMath::Cos(UE_TWO_PI * (this->WheelCurrentTime / this->GoboWheelPeriod)) / 20); // /20 to reduce the shake range 
+			this->WheelCurrentTime += deltaSeconds;
+			this->SetTargetValue(this->ShakeBaseIndex + FMath::Cos(UE_TWO_PI * (this->WheelCurrentTime / this->GoboWheelPeriod)) / 20, InterpolationIds::WHEEL_ROTATION); // /20 to reduce the shake range 
 			break;
 
 		case ECPGDTFAttributeType::Gobo_n_WheelRandom:
 
-			this->WheelCurrentTime += DeltaSeconds;
+			this->WheelCurrentTime += deltaSeconds;
 			if (this->WheelCurrentTime >= this->GoboWheelPeriod) {
 				this->WheelCurrentTime = 0;
-				this->SetTargetValue(FMath::RandHelper(this->NbrGobos));
+				this->SetTargetValue(FMath::RandHelper(this->NbrGobos), InterpolationIds::WHEEL_ROTATION);
 			}
 			break;
 
 		default:
 			break;
-		}
-
-		if (DMXChannelTreeTwo.IsEmpty()) break; // If we have only one channel we quit the loop
-	}
-
-	if (this->CurrentWheelIndex.IsUpdating) {
-		this->CurrentWheelIndex.Travel(DeltaSeconds); // Update
-		if (this->CurrentWheelIndex.IsInterpolationDone()) this->CurrentWheelIndex.EndInterpolation(); // Is done?
-		this->SetValueNoInterp(this->CurrentWheelIndex.CurrentValue);
 	}
 }
 
 /**
  * Apply a Gobo to the light entire output
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 27 july 2022
  *
  * @param Beam
  * @param WheelIndex
  */
-void UCPGDTFGoboWheelFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float WheelIndex) {
+void UCPGDTFGoboWheelFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float value, int interpolationId) {
+	InterpolationIds iid = (InterpolationIds)interpolationId;
+	switch (iid) {
+		case InterpolationIds::GOBO_ROTATION: {
+			Beam->SetRelativeRotation(FRotator(-90, 0, value));
+			break;
+		}
+		case InterpolationIds::WHEEL_ROTATION: {
+			#ifdef ENABLE_OLD_RENDER //Keeping them for test old lights
+				setAllScalarParameters(Beam, "DMX Gobo Index", value);
+			#endif
+			setAllScalarParameters(Beam, this->mIndexParamName, value);
 
-	if (Beam == nullptr) return;
-
-	if (Beam->DynamicMaterialBeam) Beam->DynamicMaterialBeam->SetScalarParameterValue("DMX Gobo Index", WheelIndex);
-	if (Beam->DynamicMaterialLens) Beam->DynamicMaterialLens->SetScalarParameterValue("DMX Gobo Index", WheelIndex);
-	if (Beam->DynamicMaterialSpotLight) Beam->DynamicMaterialSpotLight->SetScalarParameterValue("DMX Gobo Index", WheelIndex);
-}
-
-/**
- * Set a rotation on the gobo
- * @author Dorian Gardes - Clay Paky S.P.A.
- * @date 29 july 2022
- *
- * @param RotationAngle
- */
-void UCPGDTFGoboWheelFixtureComponent::SetValueNoInterpGoboRotation(float RotationAngle) {
-
-	for (UCPGDTFBeamSceneComponent* Beam : AttachedBeams) {
-		if (Beam == nullptr) continue;
-		Beam->SetRelativeRotation(FRotator(-90, 0, RotationAngle));
+			break;
+		}
 	}
-	this->GoboCurrentAngle = RotationAngle;
 }
 
-/**
- * Set a rotation on the gobo
- * @author Dorian Gardes - Clay Paky S.P.A.
- * @date 03 august 2022
- *
- * @param DeltaRotationAngle
- */
-void UCPGDTFGoboWheelFixtureComponent::SetValueNoInterpGoboDeltaRotation(float DeltaRotationAngle) {
-
-	for (UCPGDTFBeamSceneComponent* Beam : AttachedBeams) {
-		if (Beam == nullptr) continue;
-		Beam->SetRelativeRotation(FRotator(-90, 0, this->GoboCurrentAngle + DeltaRotationAngle));
-	}
-	this->GoboCurrentAngle += DeltaRotationAngle;
-}
+#ifdef ENABLE_OLD_RENDER
+#undef ENABLE_OLD_RENDER
+#endif

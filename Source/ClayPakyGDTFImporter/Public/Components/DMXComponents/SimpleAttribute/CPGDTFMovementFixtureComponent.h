@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -50,10 +50,19 @@ class CLAYPAKYGDTFIMPORTER_API UCPGDTFMovementFixtureComponent : public UCPGDTFS
 protected:
 
 	UPROPERTY(EditAnywhere, Category = "Movement Component")
-		bool bInvertRotation = false;
+	bool bInvertRotation = false;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement Component")
-		ECPGDTFMovementFixtureType MovementType;
+	ECPGDTFMovementFixtureType MovementType;
+
+	UPROPERTY(BlueprintReadOnly)
+	FCPDMXChannelData mChannelData;
+
+	virtual float getDefaultRealAcceleration(FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultRealFade(FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultAccelerationRatio(float realFade, FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultFadeRatio(float realAcceleration, FCPDMXChannelData& channelData, int interpolationId) override;
+
 
 public:
 	UCPGDTFMovementFixtureComponent() {};
@@ -61,11 +70,12 @@ public:
 	/// Initializes the component on spawn on a world
 	void OnConstruction() override;
 
-	void Setup(FDMXImportGDTFDMXChannel DMXChannel) override;
+	bool Setup(FDMXImportGDTFDMXChannel DMXChannel, int attributeIndex) override;
+
+	void BeginPlay() override;
 
 	/// Called to set the value. When interpolation is enabled this function is called by the plugin until the target value is reached, else just once.
-	UFUNCTION(BlueprintCallable, Category = "DMX Component")
-	void SetValueNoInterp(float Rotation) override;
+	void SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* beam, float value, int interpolationId) override;
 
 	  /*******************************************/
 	 /*           Component Specific            */
@@ -79,6 +89,4 @@ public:
 	/*******************************************/
 
 	void SetTargetValue(float AbsoluteValue) override;
-
-	void InterpolateComponent(float DeltaSeconds) override;
 };

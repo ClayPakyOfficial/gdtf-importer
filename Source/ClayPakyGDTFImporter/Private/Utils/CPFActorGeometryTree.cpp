@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,7 @@ FActorGeometryTree::~FActorGeometryTree() {
 
 /**
  * Creates the object, all the SceneComponent tree and attach them to the Actor
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 13 June 2022
  *
  * @param Actor Actor to attach the components
@@ -82,12 +82,12 @@ void FActorGeometryTree::CreateGeometryTree(ACPGDTFFixtureActor* Actor, FString 
 
 /**
  * Clean the SceneComponent tree of the Actor
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 09 September 2022
  */
 void FActorGeometryTree::DestroyGeometryTree() {
-
-	this->DestroyTreeBranch(this->ParentActor->GetRootComponent());
+	if(this->ParentActor && this->ParentActor->GetRootComponent())
+		this->DestroyTreeBranch(this->ParentActor->GetRootComponent());
 	this->Components.Empty();
 	this->Components.Shrink();
 	this->BeamComponents.Empty();
@@ -96,7 +96,7 @@ void FActorGeometryTree::DestroyGeometryTree() {
 
 /**
  * Fill the map with existing Actor Geometries
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 22 June 2022
  *
  * @param Actor Parent Actor
@@ -117,7 +117,7 @@ void FActorGeometryTree::ReParseGeometryTree(ACPGDTFFixtureActor* Actor) {
 
 /**
  * Get all the beams under a given geometry name
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 27 June 2022
  *
  * @param GeometryName
@@ -130,7 +130,7 @@ TArray<UCPGDTFBeamSceneComponent*> FActorGeometryTree::GetBeamsUnderGeometry(FNa
 
 /**
  * Get all the beams under a given geometry name
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 27 June 2022
  *
  * @param GeometryName
@@ -166,7 +166,7 @@ TArray<UCPGDTFBeamSceneComponent*> FActorGeometryTree::GetBeamsUnderGeometry_Int
 
 /**
  * Return the array of the first level of the geometry tree
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 09 September 2022
  *
  * @return TArray<UCPGDTFDescriptionGeometryBase*>
@@ -178,7 +178,7 @@ TArray<UCPGDTFDescriptionGeometryBase*> FActorGeometryTree::GetGDTFTopLevelGeome
 
 /**
  * Creates a branch of the tree (the given geometry and all his childrens)
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 15 June 2022
  *
  * @param Parent
@@ -200,7 +200,11 @@ USceneComponent* FActorGeometryTree::CreateTreeBranch(USceneComponent* Parent, U
 	
 	// Creation of the sub geometries
 	for (UCPGDTFDescriptionGeometryBase* ChildGeometry : Geometry->Childrens) {
-		this->CreateTreeBranch(CurrentComponent, ChildGeometry, Models, FixturePackagePath);
+		if (ChildGeometry) {
+			this->CreateTreeBranch(CurrentComponent, ChildGeometry, Models, FixturePackagePath);
+		} else {
+			UE_LOG_CPGDTFIMPORTER(Warning, TEXT("CreateTreeBranch was called with a null ChildGeometry!"));
+		}
 	}
 
 	// Creation of StaticMesh
@@ -249,7 +253,7 @@ USceneComponent* FActorGeometryTree::CreateTreeBranch(USceneComponent* Parent, U
 
 /**
  * Destroy a branch of the tree (All the childrens of the given USceneComponent)
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 09 September 2022
  *
  * @param Parent
@@ -271,7 +275,7 @@ void FActorGeometryTree::DestroyTreeBranch(USceneComponent* Parent) {
 
 /**
  * Parse a branch of the tree (the given geometry and all his childrens)
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 15 June 2022
  *
  * @param BranchRootComponent
@@ -303,7 +307,7 @@ void FActorGeometryTree::ParseTreeBranch(USceneComponent* BranchRootComponent) {
 
 /**
  * Creates a StaticMeshComponent and attach it to the parent.
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 13 June 2022
  *
  * @param Parent
@@ -356,7 +360,7 @@ bool FActorGeometryTree::CreateStaticMeshComponentChild(USceneComponent* Parent,
 
 /**
  * Creates a CPGDTFBeamSceneComponent and attach it to the parent.
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes, Luca Sorace - Clay Paky S.R.L.
  * @date 15 June 2022
  *
  * @param Parent
@@ -381,10 +385,13 @@ bool FActorGeometryTree::CreateBeamComponentChild(USceneComponent* Parent, UCPGD
 		return false;
 	}
 
+	int selectedMode = this->ParentActor->CurrentModeIndex;
+	UCPGDTFDescription *gdtfDescription = this->ParentActor->GDTFDescription;
+	TArray<UActorComponent *> components = this->ParentActor->GetInstanceComponents();
 	FName Name = FName(FActorGeometryTree::PREFIX_BEAM + this->NamePrefix + Geometry->Name.ToString());
 	UCPGDTFBeamSceneComponent* Component = NewObject<UCPGDTFBeamSceneComponent>(this->ParentActor, UCPGDTFBeamSceneComponent::StaticClass(), Name);
 	Component->SetRelativeRotation(FRotator(-90, 0, 0));
-	Component->PreConstruct(Geometry, &Model, FixturePackagePath);
+	Component->PreConstruct(Geometry, &Model, FixturePackagePath, gdtfDescription, components, selectedMode);
 	Component->OnComponentCreated();
 	Component->AttachToComponent(Parent, FAttachmentTransformRules::KeepRelativeTransform);
 	this->ParentActor->AddInstanceComponent(Component);
@@ -394,7 +401,7 @@ bool FActorGeometryTree::CreateBeamComponentChild(USceneComponent* Parent, UCPGD
 
 /**
  * Creates a USceneComponent and attach it to the parent.
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 13 June 2022
  *
  * @param Parent Component to attach the newly created. If NULL we set the component at RootComponent

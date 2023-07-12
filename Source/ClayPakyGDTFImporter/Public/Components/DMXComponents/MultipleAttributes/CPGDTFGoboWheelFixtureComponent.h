@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,8 @@ SOFTWARE.
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/DMXComponents/CPGDTFMultipleAttributeBeamFixtureComponent.h"
+#include "Factories/CPGDTFRenderPipelineBuilder.h"
+#include "Components/DMXComponents/CPGDTFMultipleAttributeFixtureComponent.h"
 #include "CPGDTFGoboWheelFixtureComponent.generated.h"
 
 /**
@@ -39,36 +40,31 @@ SOFTWARE.
 /// \cond NOT_DOXYGEN
 UCLASS(ClassGroup = (DMX), Meta = (BlueprintSpawnableComponent, DisplayName = "Gobo Wheel Component", RestrictedToClasses = "ACPGDTFFixtureActor"), HideCategories = ("Variable", "Sockets", "Tags", "Activation", "Cooking", "ComponentReplication", "AssetUserData", "Collision", "Events"))
 /// \endcond
-class CLAYPAKYGDTFIMPORTER_API UCPGDTFGoboWheelFixtureComponent : public UCPGDTFMultipleAttributeBeamFixtureComponent {
+class CLAYPAKYGDTFIMPORTER_API UCPGDTFGoboWheelFixtureComponent : public UCPGDTFMultipleAttributeFixtureComponent {
 
 	GENERATED_BODY()
 
 protected:
-
-	ECPGDTFAttributeType RunningEffectTypeChannelOne = ECPGDTFAttributeType::Gobo_n_;
-	ECPGDTFAttributeType RunningEffectTypeChannelTwo = ECPGDTFAttributeType::Gobo_n_;
-
-	FDMXChannelTree DMXChannelTreeOne;
-	FDMXChannelTree DMXChannelTreeTwo;
+	enum InterpolationIds {
+		GOBO_ROTATION,
+		WHEEL_ROTATION
+	};
 
 	UPROPERTY()
-		FDMXImportGDTFDMXChannel GDTFDMXChannelDescriptionOne;
-
+	UTexture2D* WheelTexture;
 	UPROPERTY()
-		FDMXImportGDTFDMXChannel GDTFDMXChannelDescriptionTwo;
-
-	UPROPERTY()
-		UTexture2D* WheelTexture;
-	UPROPERTY()
-		UTexture2D* WheelTextureFrosted;
+	UTexture2D* WheelTextureFrosted;
 
 	/// Number of gobos on the wheel
 	UPROPERTY()
-		int NbrGobos;
+	int NbrGobos;
+
+	//Param name inside the materials that controls the index of the gobo wheel
+	UPROPERTY(BlueprintReadOnly)
+	FName mIndexParamName;
 
 	//Specific for effects interpolation
 
-	FChannelInterpolation CurrentWheelIndex;
 	float GoboCurrentAngle;
 
 	float ShakeBaseIndex;
@@ -81,37 +77,25 @@ protected:
 public:
 	UCPGDTFGoboWheelFixtureComponent() {};
 
-	void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels) override;
+	bool Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) override;
 
-	void BeginPlay();
-	//void OnConstruction() override;
+	void BeginPlay() override;
 
 	  /*******************************************/
 	 /*               DMX Related               */
 	/*******************************************/
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0", ClampMax = "512", DisplayName = "Gobo Selection Channel Address"), Category = "DMX Channels")
-		int32 AddressChannelOne;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0", ClampMax = "512", DisplayName = "Gobo Rotation Channel Address"), Category = "DMX Channels")
-		int32 AddressChannelTwo;
-
-	/// Pushes DMX Values to the Component. Expects normalized values in the range of 0.0f - 1.0f
-	virtual void PushDMXRawValues(UDMXEntityFixturePatch* FixturePatch, const TMap<int32, int32>& RawValuesMap) override;
-
-	void SetTargetValue(float WheelIndex);
-
 	/**
 	 * Read DMXValue and apply the effect to the Beam
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 27 july 2022
 	 *
 	 * @param DMXValue
 	 * @param IsFirstChannel
 	*/
-	void ApplyEffectToBeam(int32 DMXValue, bool IsFirstChannel = true);
+	void ApplyEffectToBeam(int32 DMXValue, FCPComponentChannelData& channel, TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*>& DMXBehaviour, ECPGDTFAttributeType& AttributeType, float physicalValue);
 
-	void InterpolateComponent(float DeltaSeconds) override;
+	void InterpolateComponent_BeamInternal(float deltaSeconds, FCPComponentChannelData& channel) override;
 
 	/*******************************************/
    /*           Component Specific            */
@@ -119,31 +103,21 @@ public:
 
 protected:
 
+	TArray<TSet<ECPGDTFAttributeType>> getAttributeGroups() override;
+
+	virtual float getDefaultRealAcceleration(FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultRealFade(FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultAccelerationRatio(float realFade, FCPDMXChannelData& channelData, int interpolationId) override;
+	virtual float getDefaultFadeRatio(float realAcceleration, FCPDMXChannelData& channelData, int interpolationId) override;
+
+
 	/**
 	 * Apply a Gobo to the light entire output
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 27 july 2022
 	 *
 	 * @param Beam
 	 * @param WheelIndex
 	 */
-	void SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* Beam, float WheelIndex) override;
-	
-	/**
-	 * Set a rotation on the gobo
-	 * @author Dorian Gardes - Clay Paky S.P.A.
-	 * @date 29 july 2022
-	 * 
-	 * @param RotationAngle
-	 */
-	void SetValueNoInterpGoboRotation(float RotationAngle);
-
-	/**
-	 * Set a rotation on the gobo
-	 * @author Dorian Gardes - Clay Paky S.P.A.
-	 * @date 03 august 2022
-	 *
-	 * @param DeltaRotationAngle
-	 */
-	void SetValueNoInterpGoboDeltaRotation(float DeltaRotationAngle);
+	void SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* beam, float value, int interpolationId) override;
 };

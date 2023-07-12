@@ -1,7 +1,7 @@
 ﻿/*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -54,7 +54,7 @@ public:
 
 	/**
 	 * Add Red to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 * 
 	 * @param Intensity Must be in range [0;1]
@@ -63,7 +63,7 @@ public:
 
 	/**
 	 * Add Green to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -72,7 +72,7 @@ public:
 
 	/**
 	 * Add Blue to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -81,7 +81,7 @@ public:
 
 	/**
 	 * Add White to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -90,7 +90,7 @@ public:
 
 	/**
 	 * Add Cyan to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -99,7 +99,7 @@ public:
 
 	/**
 	 * Add Magenta to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -108,7 +108,7 @@ public:
 
 	/**
 	 * Add Yellow to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -117,7 +117,7 @@ public:
 
 	/**
 	 * Add Amber to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -126,7 +126,7 @@ public:
 
 	/**
 	 * Add Lime to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -135,7 +135,7 @@ public:
 
 	/**
 	 * Add BlueGreen to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -144,7 +144,7 @@ public:
 
 	/**
 	 * Add LightBlue to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -153,7 +153,7 @@ public:
 
 	/**
 	 * Add Purple to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -162,7 +162,7 @@ public:
 
 	/**
 	 * Add Pink to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -171,7 +171,7 @@ public:
 
 	/**
 	 * Add WarmWhite to the color (3000K)
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -180,7 +180,7 @@ public:
 
 	/**
 	 * Add CoolWhite to the color (7000K)
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -189,7 +189,7 @@ public:
 
 	/**
 	 * Add UV to the color
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param Intensity Must be in range [0;1]
@@ -198,7 +198,7 @@ public:
 
 	/**
 	 * Blend the internal color with the given one
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 21 july 2022
 	 *
 	 * @param BlendingColor
@@ -208,7 +208,7 @@ public:
 
 	/**
 	 * Convert a HSV color representation to a RGB one
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 25 july 2022
 	 *
 	 * @param H Hue Must be in range [0; 360]
@@ -220,7 +220,7 @@ public:
 
 	/**
 	 * Convert a RGB color representation to a HSV one
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 25 july 2022
 	 *
 	 * @param RGBColor Color to convert
@@ -230,7 +230,7 @@ public:
 
 	/**
 	 * Convert a CIE color representation to a RGB one
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 11 july 2022
 	 *
 	 * @param InitialColor Color to convert
@@ -240,7 +240,7 @@ public:
 
 	/**
 	 * Convert a RGB color representation to a CIE one
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 11 july 2022
 	 *
 	 * @param RGB Color to convert

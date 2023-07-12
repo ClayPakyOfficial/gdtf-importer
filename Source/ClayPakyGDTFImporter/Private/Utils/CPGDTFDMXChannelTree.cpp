@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -23,34 +23,34 @@ SOFTWARE.
 */
 
 #include "CPGDTFDMXChannelTree.h"
-
 /*************************************************************/
 
 bool FDMXChannelSetTreeNode::IsValueInRange(int32 DMXValue) {
 
     // Permit to deal with value 255 without edit GDTF values for a possible future export
-    if (DMXValue == 255) return DMXValue >= this->ChannelSet->DMXFrom.Value && DMXValue <= this->ChannelSet->DMXTo.Value;
-    else return DMXValue >= this->ChannelSet->DMXFrom.Value && DMXValue < this->ChannelSet->DMXTo.Value;
+    if (DMXValue == 0xff || DMXValue == 0xffff || DMXValue == 0xffffff || DMXValue == 0xffffffff) {
+        return DMXValue >= this->ChannelSet.DMXFrom.Value && DMXValue <= this->ChannelSet.DMXTo.Value;
+    } else return DMXValue >= this->ChannelSet.DMXFrom.Value && DMXValue < this->ChannelSet.DMXTo.Value;
 }
 
 bool FDMXChannelSetTreeNode::operator<(const int32& Other) const {
-    return this->ChannelSet->DMXTo.Value <= Other;
+    return this->ChannelSet.DMXTo.Value <= Other;
 }
 
 bool FDMXChannelSetTreeNode::operator<(const FDMXChannelSetTreeNode& Other) const {
-    return this->ChannelSet->DMXTo.Value < Other.ChannelSet->DMXTo.Value;
+    return this->ChannelSet.DMXTo.Value < Other.ChannelSet.DMXTo.Value;
 }
 
 bool FDMXChannelSetTreeNode::operator>(const FDMXChannelSetTreeNode& Other) const {
-    return this->ChannelSet->DMXFrom.Value > Other.ChannelSet->DMXFrom.Value;
+    return this->ChannelSet.DMXFrom.Value > Other.ChannelSet.DMXFrom.Value;
 }
 
 bool FDMXChannelSetTreeNode::operator<=(const FDMXChannelSetTreeNode& Other) const {
-    return this->ChannelSet->DMXTo.Value <= Other.ChannelSet->DMXTo.Value;
+    return this->ChannelSet.DMXTo.Value <= Other.ChannelSet.DMXTo.Value;
 }
 
 bool FDMXChannelSetTreeNode::operator>=(const FDMXChannelSetTreeNode& Other) const {
-    return this->ChannelSet->DMXFrom.Value >= Other.ChannelSet->DMXFrom.Value;
+    return this->ChannelSet.DMXFrom.Value >= Other.ChannelSet.DMXFrom.Value;
 }
 
 /*************************************************************/
@@ -59,49 +59,50 @@ void FDMXLogicalChannelTree::Insert(FCPGDTFDescriptionChannelFunction Item) {
     
     for (int i=0; i < Item.ChannelSets.Num(); i++) {
 
-        if (i == Item.ChannelSets.Num() -1) this->Insert(new FCPGDTFDescriptionChannelSet(Item.ChannelSets[i], Item.DMXTo));
-        else this->Insert(new FCPGDTFDescriptionChannelSet(Item.ChannelSets[i], Item.ChannelSets[i+1].DMXFrom));
+        if (i == Item.ChannelSets.Num() - 1) {
+            auto elem = FCPGDTFDescriptionChannelSet(Item.ChannelSets[i], Item.DMXTo);
+            this->Insert(elem);
+        } else {
+            auto elem = FCPGDTFDescriptionChannelSet(Item.ChannelSets[i], Item.ChannelSets[i + 1].DMXFrom);
+            this->Insert(elem);
+        }
     }
 }
 
-void FDMXLogicalChannelTree::Insert(FCPGDTFDescriptionChannelSet* Item) {
+void FDMXLogicalChannelTree::Insert(FCPGDTFDescriptionChannelSet& Item) {
 
-    FDMXChannelSetTreeNode* NewElement = new FDMXChannelSetTreeNode();
-    FDMXChannelSetTreeNode* Parent;
-    NewElement->ChannelSet = Item;
-    NewElement->Left = nullptr;
-    NewElement->Right = nullptr;
-    Parent = nullptr;
+    FDMXChannelSetTreeNode NewElement = FDMXChannelSetTreeNode();
+    FDMXChannelSetTreeNode* Parent = nullptr;
+    NewElement.ChannelSet = Item;
+    NewElement.Left = -1;
+    NewElement.Right = -1;
 
-    if (this->IsEmpty()) Root = NewElement;
+
+    if (this->IsEmpty()) Root = elements.Add(NewElement);
     else {
+        int32 elementId = elements.Add(NewElement);
 
-        FDMXChannelSetTreeNode* Ptr = Root;
-        while (Ptr != nullptr) {
-            Parent = Ptr;
-            if (*NewElement > *Ptr) Ptr = Ptr->Right;
-            else Ptr = Ptr->Left;
+        int32 idx = Root;
+        while (idx != -1) {
+            Parent = &elements[idx];
+            if (NewElement > *Parent) idx = Parent->Right;
+            else idx = Parent->Left;
         }
-        if (*NewElement < *Parent) Parent->Left = NewElement;
-        else Parent->Right = NewElement;
+        if (NewElement < *Parent) Parent->Left = elementId;
+        else Parent->Right = elementId;
     }
 }
 
 FCPGDTFDescriptionChannelSet* FDMXLogicalChannelTree::GetChannelSetByDMXValue(int32 DMXValue) {
-
     if (this->IsEmpty()) return nullptr;
-
-    FDMXChannelSetTreeNode* CurrentNode = this->Root;
+    FDMXChannelSetTreeNode* CurrentNode = &elements[this->Root];
 
     while (!CurrentNode->IsValueInRange(DMXValue)) {
-
-        //go to right tree
-        if (*CurrentNode < DMXValue) CurrentNode = CurrentNode->Right;
-        //else go to left tree
-        else CurrentNode = CurrentNode->Left;
-        if (CurrentNode == nullptr) return nullptr;
+        int32 index = *CurrentNode < DMXValue ? CurrentNode->Right : CurrentNode->Left;
+        if (index < 0) return nullptr;
+        CurrentNode = &elements[index];
     }
-    return CurrentNode->ChannelSet;
+    return &CurrentNode->ChannelSet;
 }
 
 /*************************************************************/
@@ -109,28 +110,29 @@ FCPGDTFDescriptionChannelSet* FDMXLogicalChannelTree::GetChannelSetByDMXValue(in
 bool FDMXChannelTreeNode::IsValueInRange(int32 DMXValue) {
 
     // Permit to deal with value 255 without edit GDTF values for a possible future export
-    if (DMXValue == 255) return DMXValue >= this->ChannelFunction->DMXFrom.Value && DMXValue <= this->ChannelFunction->DMXTo.Value;
-    else return DMXValue >= this->ChannelFunction->DMXFrom.Value && DMXValue < this->ChannelFunction->DMXTo.Value;
+    if (DMXValue == 0xff || DMXValue == 0xffff || DMXValue == 0xffffff || DMXValue == 0xffffffff) {
+        return DMXValue >= this->ChannelFunction.DMXFrom.Value && DMXValue <= this->ChannelFunction.DMXTo.Value;
+    } else return DMXValue >= this->ChannelFunction.DMXFrom.Value && DMXValue < this->ChannelFunction.DMXTo.Value;
 }
 
 bool FDMXChannelTreeNode::operator<(const int32& Other) const {
-    return this->ChannelFunction->DMXTo.Value <= Other;
+    return this->ChannelFunction.DMXTo.Value <= Other;
 }
 
 bool FDMXChannelTreeNode::operator<(const FDMXChannelTreeNode& Other) const {
-    return this->ChannelFunction->DMXTo.Value < Other.ChannelFunction->DMXTo.Value;
+    return this->ChannelFunction.DMXTo.Value < Other.ChannelFunction.DMXTo.Value;
 }
 
 bool FDMXChannelTreeNode::operator>(const FDMXChannelTreeNode& Other) const {
-    return this->ChannelFunction->DMXFrom.Value > Other.ChannelFunction->DMXFrom.Value;
+    return this->ChannelFunction.DMXFrom.Value > Other.ChannelFunction.DMXFrom.Value;
 }
 
 bool FDMXChannelTreeNode::operator<=(const FDMXChannelTreeNode& Other) const {
-    return this->ChannelFunction->DMXTo.Value <= Other.ChannelFunction->DMXTo.Value;
+    return this->ChannelFunction.DMXTo.Value <= Other.ChannelFunction.DMXTo.Value;
 }
 
 bool FDMXChannelTreeNode::operator>=(const FDMXChannelTreeNode& Other) const {
-    return this->ChannelFunction->DMXFrom.Value >= Other.ChannelFunction->DMXFrom.Value;
+    return this->ChannelFunction.DMXFrom.Value >= Other.ChannelFunction.DMXFrom.Value;
 }
 
 /*************************************************************/
@@ -145,54 +147,53 @@ void FDMXChannelTree::Insert(FDMXImportGDTFLogicalChannel Item, uint8 NbrDMXChan
             EndChannelValue.Value = FMath::Pow(256.0f, NbrDMXChannels) - 1;
             EndChannelValue.ValueSize = NbrDMXChannels;
 
-            this->Insert(new FCPGDTFDescriptionChannelFunction(Item.ChannelFunctions[i], EndChannelValue));
-        } else this->Insert(new FCPGDTFDescriptionChannelFunction(Item.ChannelFunctions[i], Item.ChannelFunctions[i+1].DMXFrom));
+            auto elem = FCPGDTFDescriptionChannelFunction(Item.ChannelFunctions[i], EndChannelValue);
+            this->Insert(elem);
+        } else {
+            auto elem = FCPGDTFDescriptionChannelFunction(Item.ChannelFunctions[i], Item.ChannelFunctions[i + 1].DMXFrom);
+            this->Insert(elem);
+        }
     }   
 }
 
-void FDMXChannelTree::Insert(FCPGDTFDescriptionChannelFunction* Item) {
+void FDMXChannelTree::Insert(FCPGDTFDescriptionChannelFunction& Item) {
 
-    FDMXChannelTreeNode* NewElement = new FDMXChannelTreeNode();
-    FDMXChannelTreeNode* Parent;
-    NewElement->ChannelFunction = Item;
-    NewElement->Left = nullptr;
-    NewElement->Right = nullptr;
-    NewElement->ChannelSetsTree = FDMXLogicalChannelTree();
-    NewElement->ChannelSetsTree.Insert(*Item);
-    Parent = nullptr;
+    FDMXChannelTreeNode NewElement = FDMXChannelTreeNode();
+    FDMXChannelTreeNode *Parent = nullptr;
+    NewElement.ChannelFunction = Item;
+    NewElement.Left = -1;
+    NewElement.Right = -1;
+    NewElement.ChannelSetsTree = FDMXLogicalChannelTree();
+    NewElement.ChannelSetsTree.Insert(Item);
 
-    if (this->IsEmpty()) Root = NewElement;
+
+    if (this->IsEmpty()) Root = elements.Add(NewElement);
     else {
+        int32 elementId = elements.Add(NewElement);
 
-        FDMXChannelTreeNode* Ptr = Root;
-        while (Ptr != nullptr) {
-            Parent = Ptr;
-            if (*NewElement > *Ptr) Ptr = Ptr->Right;
-            else Ptr = Ptr->Left;
+        int32 idx = Root;
+        while (idx != -1) {
+            Parent = &elements[idx];
+            if (NewElement > *Parent) idx = Parent->Right;
+            else idx = Parent->Left;
         }
-        if (*NewElement < *Parent) Parent->Left = NewElement;
-        else Parent->Right = NewElement;
+        if (NewElement < *Parent) Parent->Left = elementId;
+        else Parent->Right = elementId;
     }
 }
 
 TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*> FDMXChannelTree::GetBehaviourByDMXValue(int32 DMXValue) {
-
     if (this->IsEmpty()) return {nullptr, nullptr};
-
-    FDMXChannelTreeNode* ChannelFunctionNode = this->Root;
+    FDMXChannelTreeNode* ChannelFunctionNode = &elements[this->Root];
 
     while (!ChannelFunctionNode->IsValueInRange(DMXValue)) {
-
-        //go to right tree
-        if (*ChannelFunctionNode < DMXValue) ChannelFunctionNode = ChannelFunctionNode->Right;
-        //else go to left tree
-        else ChannelFunctionNode = ChannelFunctionNode->Left;
-
-        if (ChannelFunctionNode == nullptr) return {nullptr, nullptr};
+        int32 index = *ChannelFunctionNode < DMXValue ? ChannelFunctionNode->Right : ChannelFunctionNode->Left;
+        if (index < 0) return {nullptr, nullptr};
+        ChannelFunctionNode = &elements[index];
     }
 
     TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*> ReturnTuple;
-    ReturnTuple.Key = ChannelFunctionNode->ChannelFunction;
+    ReturnTuple.Key = &ChannelFunctionNode->ChannelFunction;
     ReturnTuple.Value = ChannelFunctionNode->ChannelSetsTree.GetChannelSetByDMXValue(DMXValue);
 
     return ReturnTuple;

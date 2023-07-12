@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,6 @@ SOFTWARE.
 
 // Initializes the component on spawn on a world
 void UCPGDTFMovementFixtureComponent::OnConstruction() {
-
 	Super::OnConstruction();
 
 	USceneComponent** AttachedFixturePartPtr = this->GetParentFixtureActor()->GeometryTree.Components.Find(this->AttachedGeometryName);
@@ -35,26 +34,30 @@ void UCPGDTFMovementFixtureComponent::OnConstruction() {
 	this->AttachedGeometry = *AttachedFixturePartPtr;
 }
 
-void UCPGDTFMovementFixtureComponent::Setup(FDMXImportGDTFDMXChannel DMXChannell) {
-
-	Super::Setup(DMXChannell);
-	
+bool UCPGDTFMovementFixtureComponent::Setup(FDMXImportGDTFDMXChannel DMXChannell, int attributeIndex) {
 	ECPGDTFAttributeType DMXChannelAttributeType = CPGDTFDescription::GetGDTFAttributeTypeValueFromString(DMXChannell.LogicalChannels[0].Attribute.Name.ToString());
 	this->MovementType = DMXChannelAttributeType == ECPGDTFAttributeType::Pan ? ECPGDTFMovementFixtureType::Pan : ECPGDTFMovementFixtureType::Tilt;
+	mMainAttributes.Add(DMXChannelAttributeType);
+	Super::Setup(DMXChannell, attributeIndex);
+	this->bUseInterpolation = true;
+	return true;
 }
 
-void UCPGDTFMovementFixtureComponent::SetValueNoInterp(float Rotation) {
+void UCPGDTFMovementFixtureComponent::BeginPlay() {
+	Super::BeginPlay();
+	this->mChannelData = *attributesData.getChannelData(this->MovementType == ECPGDTFMovementFixtureType::Pan ? ECPGDTFAttributeType::Pan : ECPGDTFAttributeType::Tilt);
+	this->bUseInterpolation = true;
+}
 
-	if (this->AttachedGeometry == nullptr) return;
-
+void UCPGDTFMovementFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* beam, float value, int interpolationId) {
 	FRotator CurrentRotation = this->AttachedGeometry->GetRelativeRotation();
 	switch (this->MovementType) {
-	case ECPGDTFMovementFixtureType::Pan:
-		this->AttachedGeometry->SetRelativeRotation(FRotator(CurrentRotation.Pitch, Rotation, CurrentRotation.Roll));
-		break;
-	case ECPGDTFMovementFixtureType::Tilt:
-		this->AttachedGeometry->SetRelativeRotation(FRotator(CurrentRotation.Pitch, CurrentRotation.Yaw, Rotation));
-		break;
+		case ECPGDTFMovementFixtureType::Pan:
+			this->AttachedGeometry->SetRelativeRotation(FRotator(CurrentRotation.Pitch, value, CurrentRotation.Roll));
+			break;
+		case ECPGDTFMovementFixtureType::Tilt:
+			this->AttachedGeometry->SetRelativeRotation(FRotator(CurrentRotation.Pitch, CurrentRotation.Yaw, value));
+			break;
 	}
 }
 
@@ -79,15 +82,20 @@ double UCPGDTFMovementFixtureComponent::GetRotation() {
 /*******************************************/
 
 void UCPGDTFMovementFixtureComponent::SetTargetValue(float AbsoluteValue) {
-
 	// We invert the rotation
-	if (this->bInvertRotation) AbsoluteValue = DMXChannel.MaxValue - AbsoluteValue + DMXChannel.MinValue;
+	if (this->bInvertRotation) AbsoluteValue = this->mChannelData.MaxValue - AbsoluteValue + this->mChannelData.MinValue;
 	Super::SetTargetValue(AbsoluteValue);
 }
 
-void UCPGDTFMovementFixtureComponent::InterpolateComponent(float DeltaSeconds) {
-
-	if (this->AttachedGeometry == nullptr) return;
-
-	Super::InterpolateComponent(DeltaSeconds);
+float UCPGDTFMovementFixtureComponent::getDefaultRealFade(FCPDMXChannelData& channelData, int interpolationId) {
+	return MovementType == ECPGDTFMovementFixtureType::Pan ? 1.00 : 1.00;
+}
+float UCPGDTFMovementFixtureComponent::getDefaultRealAcceleration(FCPDMXChannelData& channelData, int interpolationId) {
+	return MovementType == ECPGDTFMovementFixtureType::Pan ? 1.00 : 1.00;
+}
+float UCPGDTFMovementFixtureComponent::getDefaultFadeRatio(float realAcceleration, FCPDMXChannelData& channelData, int interpolationId) {
+	return MovementType == ECPGDTFMovementFixtureType::Pan ? 1.00 : 1.00;
+}
+float UCPGDTFMovementFixtureComponent::getDefaultAccelerationRatio(float realFade, FCPDMXChannelData& channelData, int interpolationId) {
+	return MovementType == ECPGDTFMovementFixtureType::Pan ? 1.00 : 1.00;
 }

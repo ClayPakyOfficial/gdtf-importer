@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -44,10 +44,4 @@ public:
 		PrimaryComponentTick.bStartWithTickEnabled = true;
 	};
 
-	virtual void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels) {
-		Super::Setup(AttachedGeometryNamee);
-	};
-
-	/// Called to set the value. When interpolation is enabled this function is called by the plugin until the target value is reached, else just once.
-	virtual void SetValueNoInterp(float Value) {};
 };

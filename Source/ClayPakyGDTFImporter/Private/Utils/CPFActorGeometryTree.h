@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -65,7 +65,7 @@ public:
 
 	/**
 	 * Creates the object, all the SceneComponent tree and attach them to the Actor
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 13 June 2022
 	 * 
 	 * @param Actor Actor to attach the components
@@ -76,14 +76,14 @@ public:
 
 	/**
 	 * Clean the SceneComponent tree of the Actor
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 09 September 2022
 	 */
 	void DestroyGeometryTree();
 
 	/**
 	 * Fill the map with existing Actor Geometries
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 22 June 2022
 	 * 
 	 * @param Actor Parent Actor
@@ -92,7 +92,7 @@ public:
 
 	/**
 	 * Get all the beams under a given geometry name
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 27 June 2022
 	 *
 	 * @param GeometryName
@@ -104,7 +104,7 @@ private:
 
 	/**
 	 * Get all the beams under a given geometry name
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 27 June 2022
 	 *
 	 * @param GeometryName
@@ -115,7 +115,7 @@ private:
 
 	/**
 	 * Return the array of the first level of the geometry tree
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 09 September 2022
 	 * 
 	 * @return TArray<UCPGDTFDescriptionGeometryBase*>
@@ -124,7 +124,7 @@ private:
 
 	/**
 	 * Creates a branch of the tree (the given geometry and all his childrens)
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 15 June 2022
 	 * 
 	 * @param Parent
@@ -137,7 +137,7 @@ private:
 
 	/**
 	 * Destroy a branch of the tree (All the childrens of the given USceneComponent)
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 09 September 2022
 	 *
 	 * @param Parent
@@ -146,7 +146,7 @@ private:
 
 	/**
 	 * Parse a branch of the tree (the given geometry and all his childrens)
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 15 June 2022
 	 * 
 	 * @param BranchRootComponent
@@ -155,7 +155,7 @@ private:
 
 	/**
 	 * Creates a StaticMeshComponent and attach it to the parent.
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 13 June 2022
 	 * 
 	 * @param Parent
@@ -168,7 +168,7 @@ private:
 
 	/**
 	 * Creates a CPGDTFBeamSceneComponent and attach it to the parent.
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes, Luca Sorace - Clay Paky S.R.L.
 	 * @date 15 June 2022
 	 *
 	 * @param Parent
@@ -182,7 +182,7 @@ private:
 
 	/**
 	 * Creates a USceneComponent and attach it to the parent.
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 13 June 2022
 	 * 
 	 * @param Parent Component to attach the newly created. If NULL we set the component at RootComponent

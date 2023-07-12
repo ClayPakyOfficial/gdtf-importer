@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@ SOFTWARE.
 
 /**
  * Creates the Importer of GDTF 3D models
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 10 may 2022
  */
 FCPGDTF3DModelsImporter::FCPGDTF3DModelsImporter(UPackage* Package, FString GDTFPath, const FXmlFile* XMLFile) {
@@ -66,7 +66,7 @@ FCPGDTF3DModelsImporter::FCPGDTF3DModelsImporter(UPackage* Package, FString GDTF
 
 /**
  * Import the 3D models from a GDTF file
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 10 may 2022
  *
  * @return True is all the models imports succeded
@@ -96,7 +96,7 @@ bool FCPGDTF3DModelsImporter::Import() {
 
 /**
  * Import a 3D model from a GDTF file.
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 10 may 2022
  *
  * @param ModelXML XML Node representing the model

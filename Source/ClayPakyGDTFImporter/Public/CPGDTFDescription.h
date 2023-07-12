@@ -1,7 +1,7 @@
 ﻿/*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -71,7 +71,7 @@ namespace CPGDTFDescription {
 
 	/**
 	 * Parses a GDTF Matrix
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 24 may 2022
 	 *
 	 * @param MatrixStr String to parse into a matrix
@@ -123,11 +123,11 @@ enum class ECPGDTFAttributeType : uint16 {
 	BeamShaperPos,
 	BeamShaperPosRotate,
 	BlackoutMode, ///< ❔
-	Blade_n_A,
-	Blade_n_B,
-	Blade_n_Rot,
-	BladeSoft_n_A,
-	BladeSoft_n_B,
+	Blade_n_A, ///< ✔️
+	Blade_n_B, ///< ✔️
+	Blade_n_Rot, ///< ✔️
+	BladeSoft_n_A, ///< ✔️
+	BladeSoft_n_B, ///< ✔️
 	Blower_n_, ///< ❔
 	ChromaticMode, ///< ❔
 	CIE_X, ///< ✔️
@@ -254,16 +254,17 @@ enum class ECPGDTFAttributeType : uint16 {
 	InputSource, ///< ❔
 	IntensityMSpeed,
 	IntensityReset, ///< ❔
-	Iris,
+	Iris, ///< ✔️
 	IrisMode, ///< ❔
 	IrisMSpeed,
-	IrisPulseClose,
-	IrisPulseOpen,
-	IrisRandomPulseClose,
-	IrisRandomPulseOpen,
+	IrisPulse, ///< ✔️
+	IrisPulseClose, ///< ✔️
+	IrisPulseOpen, ///< ✔️
+	IrisRandomPulseClose, ///< ❔
+	IrisRandomPulseOpen, ///< ❔
 	IrisReset, ///< ❔
-	IrisStrobe,
-	IrisStrobeRandom,
+	IrisStrobe, ///< ❔
+	IrisStrobeRandom, ///< ❔
 	KeyStone_n_A,
 	KeyStone_n_B,
 	LampControl, ///< ❔
@@ -307,7 +308,7 @@ enum class ECPGDTFAttributeType : uint16 {
 	Scale_Z,
 	ShaperMacros,
 	ShaperMacrosSpeed,
-	ShaperRot,
+	ShaperRot, ///< ✔️
 	Shutter_n_, ///< ✔️
 	Shutter_n_Strobe, ///< ✔️
 	Shutter_n_StrobeEffect,
@@ -368,7 +369,9 @@ enum class ECPGDTFAttributeType : uint16 {
 	ZoomModeBeam,
 	ZoomModeSpot,
 	ZoomMSpeed,
-	ZoomReset ///< ❔
+	ZoomReset, ///< ❔
+	DIMENSION,
+	DefaultValue
 };
 
   /***************************************************/
@@ -612,7 +615,7 @@ public:
 
 
 	/**
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 15 june 2022
 	 *
 	 * @param Type
@@ -622,7 +625,7 @@ public:
 		TArray<UCPGDTFDescriptionGeometryBase*> GetChildrensOfType(ECPGDTFDescriptionGeometryType Type);
 
 	/**
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 15 june 2022
 	 *
 	 * @param CurrentNode
@@ -633,7 +636,7 @@ public:
 		static TArray<UCPGDTFDescriptionGeometryBase*> GetChildrensOfType_STATIC(UCPGDTFDescriptionGeometryBase* CurrentNode, ECPGDTFDescriptionGeometryType Type);
 
 	/**
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 15 june 2022
 	 *
 	 * @param Type
@@ -643,7 +646,7 @@ public:
 		TArray<FName> GetChildrensNamesOfType(ECPGDTFDescriptionGeometryType Type);
 
 	/**
-	 * @author Dorian Gardes - Clay Paky S.P.A.
+	 * @author Dorian Gardes - Clay Paky S.R.L.
 	 * @date 15 june 2022
 	 *
 	 * @param CurrentNode

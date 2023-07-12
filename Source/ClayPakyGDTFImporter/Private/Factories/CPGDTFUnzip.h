@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,7 @@ class UCPGDTFUnzip {
 public:
     /**
      * Extract any type of file from the GDTF archive
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 29 april 2022
      *
      * @return void* => buffer readed
@@ -42,7 +42,7 @@ public:
 
     /**
      * Extract text file from the GDTF archive
-     * @author Dorian Gardes - Clay Paky S.P.A.
+     * @author Dorian Gardes - Clay Paky S.R.L.
      * @date 29 april 2022
      */
     static FString ExtractTextFileFromGDTFArchive(const FString& GDTFFullPath, const FString Filename);

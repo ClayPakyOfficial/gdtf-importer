@@ -1,0 +1,14 @@
+html, html.dark-mode {
+  --primary-color: rgb(252, 195, 0) !important;
+  --primary-dark-color: rgb(252, 195, 0) !important;
+  --primary-light-color: rgb(252, 195, 0) !important;
+}
+
+#projectname, .title {
+  color: rgb(252, 195, 0) !important;
+}
+
+.desc {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}

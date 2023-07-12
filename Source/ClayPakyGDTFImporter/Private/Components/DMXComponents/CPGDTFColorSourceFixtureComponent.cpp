@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,22 +25,19 @@ SOFTWARE.
 
 #include "Components/DMXComponents/CPGDTFColorSourceFixtureComponent.h"
 
-FCPDMXColorChannelData::FCPDMXColorChannelData(FDMXImportGDTFDMXChannel Channel, ECPGDTFAttributeType ColorAttribute_) {
-
-	if (Channel.Offset.Num() > 0) this->Address = FMath::Max(1, FMath::Min(512, Channel.Offset[0]));
-	else this->Address = -1;
-	this->MinValue = Channel.LogicalChannels[0].ChannelFunctions[0].PhysicalFrom;
-	FDMXImportGDTFLogicalChannel LastLogicalChannel = Channel.LogicalChannels[Channel.LogicalChannels.Num() - 1];
-	FDMXImportGDTFChannelFunction LastChannelFunction = LastLogicalChannel.ChannelFunctions[LastLogicalChannel.ChannelFunctions.Num() - 1];
-	this->MaxValue = LastChannelFunction.PhysicalTo;
-	this->DefaultValue = 0.0f;
-	this->ColorAttribute = ColorAttribute_;
-}
+FCPDMXColorChannelData::FCPDMXColorChannelData(FDMXImportGDTFDMXChannel Channel, ECPGDTFAttributeType ColorAttribute_) : FCPDMXChannelData(Channel), ColorAttribute(ColorAttribute_){}
 
 
-void UCPGDTFColorSourceFixtureComponent::BeginPlay() {
-
-	Super::BeginPlay();
+void UCPGDTFColorSourceFixtureComponent::BeginPlay(int interpolationsNeededNo, float RealFade, float RealAcceleration, float rangeSize, float defaultValue) {
+	Super::BeginPlay(interpolationsNeededNo, RealFade, RealAcceleration, rangeSize, defaultValue);
 	this->bUseInterpolation = false;
 	this->CurrentColor = FLinearColor(0, 0, 0); // Black by default
 }
+void UCPGDTFColorSourceFixtureComponent::BeginPlay(TArray<FCPDMXChannelData> interpolationValues) {
+	Super::BeginPlay(interpolationValues);
+	this->bUseInterpolation = false;
+	this->CurrentColor = FLinearColor(0, 0, 0); // Black by default
+}
+
+void UCPGDTFColorSourceFixtureComponent::ApplyEffectToBeam(int32 DMXValue, FCPComponentChannelData& channel, TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*>& DMXBehaviour, ECPGDTFAttributeType& AttributeType, float physicalValue) {}
+void UCPGDTFColorSourceFixtureComponent::SetValueNoInterp_BeamInternal(UCPGDTFBeamSceneComponent* beam, float value, int interpolationId) {}

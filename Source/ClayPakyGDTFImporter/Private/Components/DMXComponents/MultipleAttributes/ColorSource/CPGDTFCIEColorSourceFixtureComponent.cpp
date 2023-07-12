@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -32,9 +32,9 @@ UCPGDTFCIEColorSourceFixtureComponent::UCPGDTFCIEColorSourceFixtureComponent() {
 	this->bUseInterpolation = false; // No interpolation here
 };
 
-void UCPGDTFCIEColorSourceFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables) {
+bool UCPGDTFCIEColorSourceFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables, int attributeIndex) {
 
-	Super::Setup(AttachedGeometryNamee, InputsAvailables);
+	Super::Setup(AttachedGeometryNamee, InputsAvailables, attributeIndex);
 	
 	for (FDMXImportGDTFDMXChannel Channel : InputsAvailables) {
 		
@@ -56,6 +56,7 @@ void UCPGDTFCIEColorSourceFixtureComponent::Setup(FName AttachedGeometryNamee, T
 			break;
 		}
 	}
+	return true;
 }
 
 void UCPGDTFCIEColorSourceFixtureComponent::PushNormalizedRawValues(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedRawDMXValueMap& RawValuesMap) {
@@ -67,7 +68,7 @@ void UCPGDTFCIEColorSourceFixtureComponent::PushNormalizedRawValues(UDMXEntityFi
 	for (FCPDMXColorChannelData* DMXChannel : DMXChannels) {
 
 		if (DMXChannel->IsAddressValid()) {
-			const float* TargetValuePtr = RawValuesMap.Map.Find(DMXChannel->Address);
+			const float* TargetValuePtr = RawValuesMap.Map.Find(DMXChannel->address);
 			if (TargetValuePtr) {
 				const float RemappedValue = FMath::Lerp(DMXChannel->MinValue, DMXChannel->MaxValue, *TargetValuePtr);
 
@@ -90,4 +91,9 @@ void UCPGDTFCIEColorSourceFixtureComponent::PushNormalizedRawValues(UDMXEntityFi
 	}
 
 	this->CurrentColor = FCPColorWizard::ColorCIEToRGB(CIEColor);
+}
+
+TArray<TSet<ECPGDTFAttributeType>> UCPGDTFCIEColorSourceFixtureComponent::getAttributeGroups() {
+	TArray<TSet<ECPGDTFAttributeType>> ret;
+	return ret;
 }

@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Clay Paky S.P.A.
+Copyright (c) 2022 Clay Paky S.R.L.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "CPGDTFWheelImporter.h"
+#include "Factories/Importers/Wheels/CPGDTFWheelImporter.h"
 #include "ClayPakyGDTFImporterLog.h"
 #include "Utils/CPGDTFImporterUtils.h"
 #include "Utils/CPGDTFColorWizard.h"
@@ -32,13 +32,14 @@ SOFTWARE.
 #include "Rendering/Texture2DResource.h"
 #include "Engine/Texture.h"
 #include "Libs/FastGaussianBlur/FastGaussianBlur.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 
 // We limit the size of each gobo at 256x256 to preserve performances
 #define CP_GOBO_SIZE 256
 
 /**
 * Creates the Importer of GDTF textures (gobos, prisms, colors wheels ...)
-* @author Dorian Gardes - Clay Paky S.P.A.
+* @author Dorian Gardes - Clay Paky S.R.L.
 * @date 06 may 2022
 */
 FCPGDTFWheelImporter::FCPGDTFWheelImporter(UPackage* Package, FString GDTFPath, const FXmlFile* XMLFile) {
@@ -50,7 +51,7 @@ FCPGDTFWheelImporter::FCPGDTFWheelImporter(UPackage* Package, FString GDTFPath, 
 
 /**
  * Import the textures from a GDTF file
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 06 may 2022
  *
  * @return True is all the wheels slots imports succeded
@@ -76,7 +77,7 @@ bool FCPGDTFWheelImporter::Import() {
 
 /**
  * Link the textures (Gobos, Colors... ) of a fixture to his GDTF Description
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 06 may 2022
  */
 void FCPGDTFWheelImporter::LinkTexturesToGDTFDescription(UCPGDTFDescription* FixtureAsset) {
@@ -121,7 +122,7 @@ void FCPGDTFWheelImporter::LinkTexturesToGDTFDescription(UCPGDTFDescription* Fix
 
 /**
  * Import the GDTF textures related to a specific wheel if applicable
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 06 may 2022
  *
  * @param WheelXML XML Node representing the wheel
@@ -161,7 +162,7 @@ bool FCPGDTFWheelImporter::ImportWheel(const FXmlNode* WheelXML) {
 
 /**
  * Automaticaly generate the Wheels disks textures
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 06 july 2022
  *
  * @param FixtureDescription GDTFDescription of the Fixture
@@ -193,27 +194,25 @@ void FCPGDTFWheelImporter::CreateGDTFWheelsTextures(UCPGDTFDescription* FixtureD
 
 /**
  * Find the Wheel type with GDTFDescription
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes, Luca Sorace - Clay Paky S.R.L.
  * @date 06 july 2022
  *
  * @param FixtureDescription GDTF Description of a fixture
  * @param Name Name of the Wheel
  * @return Type of the Wheel
 */
-FCPGDTFWheelImporter::WheelType FCPGDTFWheelImporter::GetWheelType(UCPGDTFDescription* FixtureDescription, FName Name) {
+FCPGDTFWheelImporter::WheelType FCPGDTFWheelImporter::GetWheelType(UCPGDTFDescription* FixtureDescription, FName Name, int mode) {
 
-	for (FDMXImportGDTFDMXMode DMXMode : FixtureDescription->GetDMXModes()->DMXModes) {
-		for (FDMXImportGDTFDMXChannel Channel : DMXMode.DMXChannels) {
-			for (FDMXImportGDTFLogicalChannel LogicalChannel : Channel.LogicalChannels) {
-				for (FDMXImportGDTFChannelFunction ChannelFunction : LogicalChannel.ChannelFunctions) {
-					// If we found our Wheel
-					if (ChannelFunction.Wheel.Name.ToString().Equals(Name.ToString())) {
-						FString AttributeName = LogicalChannel.Attribute.Name.ToString();
-						if (AttributeName.StartsWith("Color")) return WheelType::Color;
-						else if (AttributeName.StartsWith("Gobo")) return WheelType::Gobo;
-						else if (AttributeName.StartsWith("Prism")) return WheelType::Prism;
-						else if (AttributeName.StartsWith("Animation")) return WheelType::Animation;
-						else if (AttributeName.StartsWith("Effects")) return WheelType::Effects;
+	auto DMXMode = FixtureDescription->GetDMXModes()->DMXModes[mode];
+	for (FDMXImportGDTFDMXChannel Channel : DMXMode.DMXChannels) {
+		for (FDMXImportGDTFLogicalChannel LogicalChannel : Channel.LogicalChannels) {
+			for (FDMXImportGDTFChannelFunction ChannelFunction : LogicalChannel.ChannelFunctions) {
+				// If we found our Wheel
+				if (ChannelFunction.Wheel.Name.ToString().Equals(Name.ToString())) {
+					FString AttributeName = LogicalChannel.Attribute.Name.ToString();
+					for (int i = 0; i < FCPGDTFWheelImporter::WheelType::WHEEL_TYPE_SIZE; i++) {
+						FCPGDTFWheelImporter::WheelType type = (FCPGDTFWheelImporter::WheelType) i;
+						if (AttributeName.StartsWith(FCPGDTFWheelImporter::wheelTypeToString(type))) return type;
 					}
 				}
 			}
@@ -222,10 +221,19 @@ FCPGDTFWheelImporter::WheelType FCPGDTFWheelImporter::GetWheelType(UCPGDTFDescri
 	// Only if the wheel is not used by DMXChannels
 	return WheelType::Effects;
 }
+FCPGDTFWheelImporter::WheelType FCPGDTFWheelImporter::GetWheelType(UCPGDTFDescription* FixtureDescription, FName Name) {
+	TArray<FDMXImportGDTFDMXMode> modes = FixtureDescription->GetDMXModes()->DMXModes;
+	for (int i = 0; i < modes.Num(); i++) {
+		FCPGDTFWheelImporter::WheelType wType = GetWheelType(FixtureDescription, Name, i);
+		if (wType != WheelType::Effects) return wType;
+	}
+	// Only if the wheel is not used by DMXChannels
+	return WheelType::Effects;
+}
 
 /**
  * Create an Array of Colors for the construction of the Color Wheel disk
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 06 july 2022
  *
  * @param Wheel Description of the wheel constructed
@@ -237,7 +245,7 @@ TArray<FLinearColor> FCPGDTFWheelImporter::GenerateColorArray(FDMXImportGDTFWhee
 
 	for (FDMXImportGDTFWheelSlot Slot : Wheel.Slots) {
 		if (Slot.MediaFileName == nullptr) ColorsArray.Add(FCPColorWizard::ColorCIEToRGB(Slot.Color));
-		else { /// TODO \todo Test this part
+		else {
 			// If a color texture was given we read the color of the center pixel
 			FLinearColor PixelColor = FLinearColor::White;
 			int32 SizeX = Slot.MediaFileName->GetSizeX();
@@ -257,7 +265,7 @@ TArray<FLinearColor> FCPGDTFWheelImporter::GenerateColorArray(FDMXImportGDTFWhee
 
 /**
  * Create a texture for a given array of SubTextures
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 12 july 2022
  *
  * @param SavePath		Path of the texture on the content browser
@@ -316,14 +324,14 @@ void FCPGDTFWheelImporter::CreateGoboWheelTexture_Internal(FString SavePath, TAr
 	FCPGDTFWheelImporter::SaveWheelToTexture_Internal(Pixels, SavePath, TextureSizeX, CP_GOBO_SIZE, false);
 
 	// Creation of the frosted version because frost operation is very consuming
-	FCPGDTFWheelImporter::FrostGoboWheelTexture_Internal(Pixels, TextureSizeX, CP_GOBO_SIZE, 4); /// TODO \todo Is a frost strenght value available in GDTF ??. LS: Linear frost not implemented
+	FCPGDTFWheelImporter::FrostWheelTexture_Internal(Pixels, TextureSizeX, CP_GOBO_SIZE, 4); /// TODO \todo Is a frost strenght value available in GDTF ??
 	FCPGDTFWheelImporter::SaveWheelToTexture_Internal(Pixels, SavePath, TextureSizeX, CP_GOBO_SIZE, true);
 	delete[] Pixels;
 }
 
 /**
  * Frost the Gobo Wheel Texture
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 14 july 2022
  * 
  * @param PixelsArray Pixels to frost
@@ -331,7 +339,7 @@ void FCPGDTFWheelImporter::CreateGoboWheelTexture_Internal(FString SavePath, TAr
  * @param SizeY Size of the Texture
  * @param Strenght Strenght of the frost
 */
-void FCPGDTFWheelImporter::FrostGoboWheelTexture_Internal(uint8* PixelsArray, int SizeX, int SizeY, float Strenght) {
+void FCPGDTFWheelImporter::FrostWheelTexture_Internal(uint8* PixelsArray, int SizeX, int SizeY, float Strenght) {
 
 	// We need to copy the input pixels to a smaller one because the Gaussian Blur algorithm only support RGB and we have RGBA
 	int* InPixelsBlur  = new int[SizeX * SizeY * 3];
@@ -364,7 +372,7 @@ void FCPGDTFWheelImporter::FrostGoboWheelTexture_Internal(uint8* PixelsArray, in
 
 /**
  * Create a texture for a given array of Colors
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 06 july 2022
  *
  * @param SavePath		Path of the texture on the content browser
@@ -372,7 +380,7 @@ void FCPGDTFWheelImporter::FrostGoboWheelTexture_Internal(uint8* PixelsArray, in
  */
 void FCPGDTFWheelImporter::CreateColorWheelTexture_Internal(FString SavePath, TArray<FLinearColor> ColorsArray) {
 
-	#define CP_COLOR_SIZE 16
+	#define CP_COLOR_SIZE 256
 
 	int X = ColorsArray.Num() * CP_COLOR_SIZE;
 	
@@ -395,13 +403,17 @@ void FCPGDTFWheelImporter::CreateColorWheelTexture_Internal(FString SavePath, TA
 	}
 
 	FCPGDTFWheelImporter::SaveWheelToTexture_Internal(Pixels, SavePath, X, CP_COLOR_SIZE);
+
+	FCPGDTFWheelImporter::FrostWheelTexture_Internal(Pixels, X, CP_COLOR_SIZE, 4); /// TODO \todo Is a frost strenght value available in GDTF ??
+	FCPGDTFWheelImporter::SaveWheelToTexture_Internal(Pixels, SavePath, X, CP_COLOR_SIZE, true);
+
 	delete[] Pixels;
 	#undef CP_COLOR_SIZE
 }
 
 /**
  * Create a texture for a given array of Pixels
- * @author Dorian Gardes - Clay Paky S.P.A.
+ * @author Dorian Gardes - Clay Paky S.R.L.
  * @date 12 july 2022
  * 
  * @param PixelsArray Pixels of the future texture
