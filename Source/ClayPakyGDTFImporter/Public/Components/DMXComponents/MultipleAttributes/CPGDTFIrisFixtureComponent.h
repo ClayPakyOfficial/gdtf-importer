@@ -45,6 +45,11 @@ protected:
 
 	FPulseEffectManager PulseManager;
 
+	UPROPERTY(BlueprintReadOnly)
+	float irisRange;
+	UPROPERTY(BlueprintReadOnly)
+	float irisMin;
+
 	//Param name inside the materials that controls the iris
 	UPROPERTY(BlueprintReadOnly)
 	FName mIrisParamName;
@@ -52,7 +57,7 @@ public:
 	UCPGDTFIrisFixtureComponent() {}
 	~UCPGDTFIrisFixtureComponent() {}
 
-	bool Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) override;
+	bool Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) override;
 
 	void BeginPlay() override;
 

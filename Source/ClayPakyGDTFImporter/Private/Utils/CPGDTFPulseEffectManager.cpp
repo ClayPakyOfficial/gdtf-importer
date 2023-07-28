@@ -24,85 +24,57 @@ SOFTWARE.
 
 #include "Utils/CPGDTFPulseEffectManager.h"
 
-/**
- * Set the properties of the pulse effect
- * @author Dorian Gardes - Clay Paky S.R.L.
- * @date 21 july 2022
- *
- * @param EffectType Type of the effect
- * @param Period in seconds
- * @param _DutyCycle Percentage (value between [0;1])
- * @param TimeOffset Percentage (value between [0;1])
- */
-void FPulseEffectManager::SetSettings(EPulseEffectType EffectType, double Period, double _DutyCycle, double TimeOffset) {
-
+void FPulseEffectManager::SetSettings(EPulseEffectType EffectType, float Period, float _DutyCycle, float TimeOffset) {
 	this->PulseEffect = EffectType;
 	this->PeriodTime = Period;
 	this->DutyCyclePercent = FMath::Max(0, FMath::Min(1, _DutyCycle));
 	this->TimeOffsetPercent = FMath::Max(0, FMath::Min(1, TimeOffset));
-	this->DutyCycle = Period * this->DutyCyclePercent;
-	this->CurrentTime = Period * this->TimeOffsetPercent;
+	this->DutyCycle = Period * DutyCyclePercent;
+	this->CurrentTime = fmod(Period * TimeOffsetPercent, PeriodTime);
 }
 
-/**
- * Change the Effect period
- * @author Dorian Gardes - Clay Paky S.R.L.
- * @date 22 july 2022
- * 
- * @param Period in seconds
-*/
-void FPulseEffectManager::ChangePeriod(double Period) {
 
-	double DeltaTimeOffset = (Period * this->TimeOffsetPercent) - (this->PeriodTime * this->TimeOffsetPercent);
-	this->CurrentTime += DeltaTimeOffset;
-	this->DutyCycle = Period * this->DutyCyclePercent;
-	this->PeriodTime = Period;
+void FPulseEffectManager::ChangePeriod(float Period) {
+	float DeltaTimeOffset = (Period * TimeOffsetPercent) - (PeriodTime * TimeOffsetPercent);
+	CurrentTime = fmod(CurrentTime + DeltaTimeOffset, PeriodTime);
+	DutyCycle = Period * DutyCyclePercent;
+	PeriodTime = Period;
 }
 
-/**
- * Calc the value for a given time without updating the internal CurrentTime.
- * @author Dorian Gardes - Clay Paky S.R.L.
- * @date 21 july 2022
- *
- * @param Time
- * @return Result
- */
-double FPulseEffectManager::CalcValue(double Time) {
 
-	while (Time >= this->PeriodTime) {
-		Time -= this->PeriodTime;
-	}
-	if (Time > this->DutyCycle) return 0;
+float FPulseEffectManager::__CalcValue_internal(float Time) {
+	if (Time > DutyCycle) return 0;
 
 	// Reference: https://en.wikipedia.org/wiki/Waveform#Examples
 
-	double Result = (UE_DOUBLE_TWO_PI * Time) / this->DutyCycle;
-
+	//Start from zero
+	if (this->PulseEffect == EPulseEffectType::Pulse) Time -= DutyCycle / 4; //Pulse effect has to fully rise/fall twice as fast
+	else Time -= DutyCycle / 2;
+	//remap Time in a [0, 1] range * pi
+	float x = (UE_PI * Time) / DutyCycle;
+	float y;
+	//Actually calc the value
 	switch (this->PulseEffect) {
-
-	case EPulseEffectType::Pulse:
-		Result = FMath::Asin(FMath::Sin(Result));
-		break;
-
-	case EPulseEffectType::PulseOpen:
-		Result = FMath::Atan(FMath::Tan(Result));
-		break;
-
-	case EPulseEffectType::PulseClose:
-		Result = - FMath::Atan(FMath::Tan(Result));
-		break;
-
-	default:
-		break;
+		case EPulseEffectType::Pulse:
+			y = FMath::Asin(FMath::Sin(2 * x)); //Pulse effect has to fully rise/fall twice as fast
+			break;
+		case EPulseEffectType::PulseOpen:
+			y = FMath::Atan(FMath::Tan(x));
+			break;
+		case EPulseEffectType::PulseClose:
+			y = - FMath::Atan(FMath::Tan(x));
+			break;
+		default:
+			break;
 	}
-
-	return UE_DOUBLE_INV_PI * Result + 0.5;
+	//Convert the value in a [0, 1] range
+	float res = UE_INV_PI * y + 0.5;
+	return res;
 }
 
-double FPulseEffectManager::InterpolatePulse(double DeltaSeconds) {
-	this->CurrentTime += DeltaSeconds;
-	while (this->CurrentTime >= this->PeriodTime) {
-		this->CurrentTime -= this->PeriodTime;
-	}
-	return this->CalcValue(this->CurrentTime);
+float FPulseEffectManager::InterpolatePulse(float DeltaSeconds) {
+	CurrentTime += DeltaSeconds;
+	loopedBack = CurrentTime > PeriodTime;
+	CurrentTime = fmod(CurrentTime, PeriodTime);
+	return __CalcValue_internal(CurrentTime);
 }

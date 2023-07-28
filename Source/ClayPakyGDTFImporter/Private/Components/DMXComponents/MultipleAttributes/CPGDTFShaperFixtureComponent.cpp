@@ -63,8 +63,8 @@ float UCPGDTFShaperFixtureComponent::getDefaultRealAcceleration(FCPDMXChannelDat
 	return defaults[interpolationId];
 }
 
-bool UCPGDTFShaperFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
-	Super::Setup(AttachedGeometryNamee, DMXChannels, attributeIndex);
+bool UCPGDTFShaperFixtureComponent::Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
+	Super::Setup(DMXChannels, attributeIndex);
 	this->orientation = attributeIndex;
 
 	//Setup method could be called without any blade attribute (so with only shaperRot/shperMacro/shaperMacroSpeed). We have to check if we really have a blade and return an error otherwise

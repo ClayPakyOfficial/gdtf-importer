@@ -25,15 +25,19 @@ SOFTWARE.
 
 #include "Components/DMXComponents/MultipleAttributes/CPGDTFIrisFixtureComponent.h"
 
-bool UCPGDTFIrisFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
-	Super::Setup(AttachedGeometryNamee, DMXChannels, attributeIndex);
+bool UCPGDTFIrisFixtureComponent::Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
+	Super::Setup(DMXChannels, attributeIndex);
 	this->bIsRawDMXEnabled = true;
 	this->bUseInterpolation = true;
+
+	this->mIrisParamName = *CPGDTFRenderPipelineBuilder::getIrisParamName();
+	FCPDMXChannelData* chData = attributesData.getChannelData(ECPGDTFAttributeType::Iris);
+	this->irisRange = abs(chData->MaxValue - chData->MinValue);
+	this->irisMin = abs(chData->MinValue);
 	return true;
 }
 
 void UCPGDTFIrisFixtureComponent::BeginPlay() {
-	this->mIrisParamName = *CPGDTFRenderPipelineBuilder::getIrisParamName();
 	Super::BeginPlay(ECPGDTFAttributeType::Iris);
 	this->bIsRawDMXEnabled = true; // Just to make sure
 	this->bUseInterpolation = true;
@@ -116,7 +120,7 @@ void UCPGDTFIrisFixtureComponent::InterpolateComponent_BeamInternal(float deltaS
 	case ECPGDTFAttributeType::IrisPulse:
 	case ECPGDTFAttributeType::IrisPulseOpen:
 	case ECPGDTFAttributeType::IrisPulseClose:
-		this->SetTargetValue(this->PulseManager.InterpolatePulse(deltaSeconds), 0);
+		this->SetTargetValue(this->PulseManager.InterpolatePulse(deltaSeconds) * irisRange + irisMin, 0);
 		break;
 	default:
 		break;
@@ -153,13 +157,13 @@ void UCPGDTFIrisFixtureComponent::StartPulseEffect(ECPGDTFAttributeType Attribut
 		switch (SubPhysical.Type) {
 		case EDMXImportGDTFSubPhysicalUnitType::DutyCycle:
 			if (SubPhysical.PhysicalUnit != EDMXImportGDTFPhysicalUnit::Percent) {
-				UE_LOG_CPGDTFIMPORTER(Warning, TEXT("Fixture %s, On Frost Pulse effect DutyCycle value unit '%s' is unsupported. Value ignored, please provide percent."), *this->GetParentFixtureActor()->GetFName().ToString(), *StaticEnum<EDMXImportGDTFPhysicalUnit>()->GetNameStringByValue((uint8)SubPhysical.PhysicalUnit));
+				UE_LOG_CPGDTFIMPORTER(Warning, TEXT("Fixture %s, On Iris Pulse effect DutyCycle value unit '%s' is unsupported. Value ignored, please provide percent."), *this->GetParentFixtureActor()->GetFName().ToString(), *StaticEnum<EDMXImportGDTFPhysicalUnit>()->GetNameStringByValue((uint8)SubPhysical.PhysicalUnit));
 			}
 			else DutyCycle = (SubPhysical.PhysicalFrom + SubPhysical.PhysicalTo) / 200;
 			break;
 		case EDMXImportGDTFSubPhysicalUnitType::TimeOffset:
 			if (SubPhysical.PhysicalUnit != EDMXImportGDTFPhysicalUnit::Percent) {
-				UE_LOG_CPGDTFIMPORTER(Warning, TEXT("Fixture %s, On Frost Pulse effect TimeOffset value unit '%s' is unsupported. Value ignored, please provide percent."), *this->GetParentFixtureActor()->GetFName().ToString(), *StaticEnum<EDMXImportGDTFPhysicalUnit>()->GetNameStringByValue((uint8)SubPhysical.PhysicalUnit));
+				UE_LOG_CPGDTFIMPORTER(Warning, TEXT("Fixture %s, On Iris Pulse effect TimeOffset value unit '%s' is unsupported. Value ignored, please provide percent."), *this->GetParentFixtureActor()->GetFName().ToString(), *StaticEnum<EDMXImportGDTFPhysicalUnit>()->GetNameStringByValue((uint8)SubPhysical.PhysicalUnit));
 			}
 			else TimeOffset = (SubPhysical.PhysicalFrom + SubPhysical.PhysicalTo) / 200;
 			break;

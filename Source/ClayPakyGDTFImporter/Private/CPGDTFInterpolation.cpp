@@ -336,7 +336,7 @@ void FChannelInterpolation::__Update_noLocks(float DeltaSeconds) {
 
 }
 
-void FChannelInterpolation::__setTargetValue_noLocks(float value) {
+void FChannelInterpolation::__setTargetValue_noLocks(float value, bool checkSpeedCap) {
 	TargetValue = value;
 	if (bFirstValueNotSet) {
 		__EndInterpolation_noLocks(true);
@@ -344,7 +344,7 @@ void FChannelInterpolation::__setTargetValue_noLocks(float value) {
 		return;
 	}
 	targetValueNoPrecision = removePrecision(value);
-	if (realFade > 0 && bSpeedCapEnabled) {
+	if (realFade > 0 && bSpeedCapEnabled && checkSpeedCap) {
 		const float range = FMath::Abs(value - CurrentValue) / maxPhysicalSpeed;
 		const float maxTime = FMath::Min(MIN_MOVEMENT_TIME, realFade * MIN_MOVEMENT_REALFADE_RATIO);
 		float movTime = getTimeToMoveThruRange(range); //if you inline this in the following if, the function call is completely skipped idk why

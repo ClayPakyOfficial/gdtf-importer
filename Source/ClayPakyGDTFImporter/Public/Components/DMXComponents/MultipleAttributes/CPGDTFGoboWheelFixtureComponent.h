@@ -77,7 +77,7 @@ protected:
 public:
 	UCPGDTFGoboWheelFixtureComponent() {};
 
-	bool Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) override;
+	bool Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) override;
 
 	void BeginPlay() override;
 

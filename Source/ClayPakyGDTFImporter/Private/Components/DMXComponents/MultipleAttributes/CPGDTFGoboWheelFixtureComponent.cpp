@@ -29,8 +29,8 @@ SOFTWARE.
 #include "Kismet/KismetMathLibrary.h"
 #include "PackageTools.h"
 
-bool UCPGDTFGoboWheelFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
-	Super::Setup(AttachedGeometryNamee, DMXChannels, attributeIndex);
+bool UCPGDTFGoboWheelFixtureComponent::Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
+	Super::Setup(DMXChannels, attributeIndex);
 
 	FDMXImportGDTFWheel Wheel;
 	findWheelObject(Wheel);

@@ -159,8 +159,9 @@ public:
 
 struct FCPDMXImportGDTFChannelFunction : public FDMXImportGDTFChannelFunction {
     FDMXImportGDTFChannelSet* getChannelSetByName(FString csName) {
+        csName = csName.TrimStartAndEnd();
         for (int i = 0; i < ChannelSets.Num(); i++)
-            if (ChannelSets[i].Name.Equals(*csName))
+            if (ChannelSets[i].Name.TrimStartAndEnd().Equals(*csName))
                 return &(ChannelSets[i]);
         return nullptr;
     }
@@ -168,20 +169,22 @@ struct FCPDMXImportGDTFChannelFunction : public FDMXImportGDTFChannelFunction {
 
 struct FCPDMXImportGDTFLogicalChannel : public FDMXImportGDTFLogicalChannel {
     FDMXImportGDTFChannelFunction* getChannelFunctionByName(FString name) {
+        name = name.TrimStartAndEnd();
         TArray<FString> sp;
         name.ParseIntoArray(sp, TEXT("."), false);
         sp.RemoveAt(0); //name starts from the current element, remove it
         return getChannelFunctionByName(sp);
     }
     FDMXImportGDTFChannelFunction* getChannelFunctionByName(TArray<FString> sp) {
-        FString cfName = sp[0]; //sp doesn't include the current element
+        FString cfName = sp[0].TrimStartAndEnd(); //sp doesn't include the current element
         for (int i = 0; i < ChannelFunctions.Num(); i++)
-            if (ChannelFunctions[i].Name.IsEqual(*cfName))
+            if (ChannelFunctions[i].Name.ToString().TrimStartAndEnd().Equals(*cfName))
                 return &(ChannelFunctions[i]);
         return nullptr;
     }
 
     FDMXImportGDTFChannelSet* getChannelSetByName(FString name) {
+        name = name.TrimStartAndEnd();
         TArray<FString> sp;
         name.ParseIntoArray(sp, TEXT("."), false);
         sp.RemoveAt(0); //name starts from the current element, remove it
@@ -190,26 +193,28 @@ struct FCPDMXImportGDTFLogicalChannel : public FDMXImportGDTFLogicalChannel {
     FDMXImportGDTFChannelSet* getChannelSetByName(TArray<FString> sp) {
         FCPDMXImportGDTFChannelFunction *cf = static_cast<FCPDMXImportGDTFChannelFunction*>(getChannelFunctionByName(sp)); //Since we don't have any new member in this structs, we can (theoretically) static_cast without undefined behaviours. Btw, we can't just use Cast since it doesn't support structs
         if (cf == nullptr) return nullptr;
-        return cf->getChannelSetByName(sp[1]);
+        return cf->getChannelSetByName(sp[1].TrimStartAndEnd());
     }
 };
 
 struct FCPDMXImportGDTFDMXChannel : public FDMXImportGDTFDMXChannel {
     FDMXImportGDTFLogicalChannel* getLogicalChannelByName(FString name) {
+        name = name.TrimStartAndEnd();
         TArray<FString> sp;
         name.ParseIntoArray(sp, TEXT("."), false);
         sp.RemoveAt(0); //name starts from the current element, remove it
         return getLogicalChannelByName(sp);
     }
     FDMXImportGDTFLogicalChannel* getLogicalChannelByName(TArray<FString> sp) {
-        FString logicalName = sp[0]; //sp doesn't include the current element
+        FString logicalName = sp[0].TrimStartAndEnd(); //sp doesn't include the current element
         for (int i = 0; i < LogicalChannels.Num(); i++)
-            if (LogicalChannels[i].Attribute.Name.IsEqual(*logicalName))
+            if (LogicalChannels[i].Attribute.Name.ToString().TrimStartAndEnd().Equals(*logicalName))
                 return &(LogicalChannels[i]);
         return nullptr;
     }
 
     FDMXImportGDTFChannelFunction* getChannelFunctionByName(FString name) {
+        name = name.TrimStartAndEnd();
         TArray<FString> sp;
         name.ParseIntoArray(sp, TEXT("."), false);
         sp.RemoveAt(0); //name starts from the current element, remove it
@@ -223,6 +228,7 @@ struct FCPDMXImportGDTFDMXChannel : public FDMXImportGDTFDMXChannel {
     }
 
     FDMXImportGDTFChannelSet* getChannelSetByName(FString name) {
+        name = name.TrimStartAndEnd();
         TArray<FString> sp;
         name.ParseIntoArray(sp, TEXT("."), false);
         sp.RemoveAt(0); //name starts from the current element, remove it
@@ -234,7 +240,6 @@ struct FCPDMXImportGDTFDMXChannel : public FDMXImportGDTFDMXChannel {
         sp.RemoveAt(0);
         FCPDMXImportGDTFChannelFunction* cf = static_cast<FCPDMXImportGDTFChannelFunction*>(logical->getChannelFunctionByName(sp));
         if (cf == nullptr) return nullptr;
-        return cf->getChannelSetByName(sp[1]);
+        return cf->getChannelSetByName(sp[1].TrimStartAndEnd());
     }
 };
-    

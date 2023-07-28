@@ -26,8 +26,8 @@ SOFTWARE.
 #include "Components/DMXComponents/MultipleAttributes/ColorCorrection/CPGDTFCTOFixtureComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 
-bool UCPGDTFCTOFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
-	Super::Setup(AttachedGeometryNamee, DMXChannels, attributeIndex);
+bool UCPGDTFCTOFixtureComponent::Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
+	Super::Setup(DMXChannels, attributeIndex);
 	this->bIsRawDMXEnabled = true;
 	return true;
 }

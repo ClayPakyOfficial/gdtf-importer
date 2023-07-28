@@ -28,8 +28,8 @@ SOFTWARE.
 #include "Kismet/KismetMathLibrary.h"
 #include "PackageTools.h"
 
-bool UCPGDTFFrostFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
-	Super::Setup(AttachedGeometryNamee, DMXChannels, attributeIndex);	
+bool UCPGDTFFrostFixtureComponent::Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
+	Super::Setup(DMXChannels, attributeIndex);	
 	this->bIsRawDMXEnabled = true;
 	return true;
 }

@@ -30,8 +30,8 @@ SOFTWARE.
 #include "Kismet/KismetMathLibrary.h"
 #include "PackageTools.h"
 
-bool UCPGDTFColorWheelFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
-	Super::Setup(AttachedGeometryNamee, DMXChannels, attributeIndex);
+bool UCPGDTFColorWheelFixtureComponent::Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
+	Super::Setup(DMXChannels, attributeIndex);
 	FDMXImportGDTFWheel Wheel;
 	findWheelObject(Wheel);
 	this->WheelColors = FCPGDTFWheelImporter::GenerateColorArray(Wheel);

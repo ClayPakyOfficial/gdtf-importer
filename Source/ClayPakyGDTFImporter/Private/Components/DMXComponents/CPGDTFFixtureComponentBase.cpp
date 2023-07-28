@@ -60,8 +60,7 @@ bool UCPGDTFFixtureComponentBase::findWheelObject(FDMXImportGDTFWheel& dest) {
 	return false;
 }
 
-bool UCPGDTFFixtureComponentBase::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
-	this->AttachedGeometryName = AttachedGeometryNamee;
+bool UCPGDTFFixtureComponentBase::Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
 	this->mAttributeIndexNo = attributeIndex;
 
 	for (int i = 0; i < DMXChannels.Num(); i++) {

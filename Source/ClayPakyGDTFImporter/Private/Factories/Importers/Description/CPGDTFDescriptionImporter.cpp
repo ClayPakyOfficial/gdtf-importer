@@ -383,24 +383,34 @@ UCPGDTFDescription* FCPGDTFDescriptionImporter::ParseXML() {
 									ImportChannelFunction.ModeFrom = FDMXImportGDTFDMXValue(ChannelFunctionNode->GetAttribute("ModeFrom").TrimStartAndEnd());
 									ImportChannelFunction.ModeTo = FDMXImportGDTFDMXValue(ChannelFunctionNode->GetAttribute("ModeTo").TrimStartAndEnd());
 
-									for (const FXmlNode* ChannelSetNode : ChannelFunctionNode->GetChildrenNodes()) {
+									if (ChannelFunctionNode->GetChildrenNodes().Num() > 0) {
+										for (const FXmlNode* ChannelSetNode : ChannelFunctionNode->GetChildrenNodes()) {
+											FDMXImportGDTFChannelSet ImportChannelSet;
+
+											ImportChannelSet.Name = *ChannelSetNode->GetAttribute("Name").TrimStartAndEnd();
+											ImportChannelSet.DMXFrom = FDMXImportGDTFDMXValue(ChannelSetNode->GetAttribute("DMXFrom").TrimStartAndEnd());
+											if (LexTryParseString(ImportChannelSet.WheelSlotIndex, *ChannelSetNode->GetAttribute("WheelSlotIndex").TrimStartAndEnd()))
+												ImportChannelSet.WheelSlotIndex--; // The starting index is 1 in GDTF Spec
+
+											if (ChannelSetNode->GetAttribute("PhysicalFrom").TrimStartAndEnd().IsEmpty()) {
+												ImportChannelSet.PhysicalFrom = PHYSICAL_CHANNEL_SET_PLACEHOLDER;
+											} else LexTryParseString(ImportChannelSet.PhysicalFrom, *ChannelSetNode->GetAttribute("PhysicalFrom").TrimStartAndEnd());
+
+											if (ChannelSetNode->GetAttribute("PhysicalTo").TrimStartAndEnd().IsEmpty()) {
+												ImportChannelSet.PhysicalTo = PHYSICAL_CHANNEL_SET_PLACEHOLDER;
+											} else LexTryParseString(ImportChannelSet.PhysicalTo, *ChannelSetNode->GetAttribute("PhysicalTo").TrimStartAndEnd());
+
+											ImportChannelFunction.ChannelSets.Add(ImportChannelSet);
+										}
+									} else {
 										FDMXImportGDTFChannelSet ImportChannelSet;
-
-										ImportChannelSet.Name = *ChannelSetNode->GetAttribute("Name").TrimStartAndEnd();
-										ImportChannelSet.DMXFrom = FDMXImportGDTFDMXValue(ChannelSetNode->GetAttribute("DMXFrom").TrimStartAndEnd());
-										if (LexTryParseString(ImportChannelSet.WheelSlotIndex, *ChannelSetNode->GetAttribute("WheelSlotIndex").TrimStartAndEnd()))
-											ImportChannelSet.WheelSlotIndex--; // The starting index is 1 in GDTF Spec
-
-										if (ChannelSetNode->GetAttribute("PhysicalFrom").TrimStartAndEnd().IsEmpty()) {
-											ImportChannelSet.PhysicalFrom = PHYSICAL_CHANNEL_SET_PLACEHOLDER;
-										} else LexTryParseString(ImportChannelSet.PhysicalFrom, *ChannelSetNode->GetAttribute("PhysicalFrom").TrimStartAndEnd());
-
- 										if (ChannelSetNode->GetAttribute("PhysicalTo").TrimStartAndEnd().IsEmpty()) {
-											ImportChannelSet.PhysicalTo = PHYSICAL_CHANNEL_SET_PLACEHOLDER;
-										} else LexTryParseString(ImportChannelSet.PhysicalTo, *ChannelSetNode->GetAttribute("PhysicalTo").TrimStartAndEnd());
-
+										ImportChannelSet.Name = ImportChannelFunction.Name.ToString();
+										ImportChannelSet.DMXFrom = ImportChannelFunction.DMXFrom;
+										ImportChannelSet.PhysicalFrom = ImportChannelFunction.PhysicalFrom;
+										ImportChannelSet.PhysicalTo = ImportChannelFunction.PhysicalTo;
 										ImportChannelFunction.ChannelSets.Add(ImportChannelSet);
 									}
+									
 									ImportLogicalChannel.ChannelFunctions.Add(ImportChannelFunction);
 								}
 

@@ -374,7 +374,7 @@ abstract class SimpleAttributeBeamFixtureComponent {
 
 abstract class MultipleAttributeFixtureComponent {
 	+ UCPGDTFMultipleAttributeFixtureComponent()
-	+ {virtual} void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels)
+	+ {virtual} void Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels)
 	+ {virtual} void SetValueNoInterp(float Value)
 }
 
@@ -463,7 +463,7 @@ class AdditiveSourceFixtureComponent {
 	+ FCPDMXColorChannelData DMXChannelUV
 
 	+ UCPGDTFAdditiveColorSourceFixtureComponent()
-	+ {virtual} {override} void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables)
+	+ {virtual} {override} void Setup(TArray<FDMXImportGDTFDMXChannel> InputsAvailables)
 	+ {virtual} {override} void PushNormalizedRawValues(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedRawDMXValueMap& RawValuesMap)
 }
 
@@ -476,7 +476,7 @@ class SubstractiveSourceFixtureComponent {
 	+ FCPDMXColorChannelData DMXChannelYellow
 
 	+ UCPGDTFSubstractiveColorSourceFixtureComponent()
-	+ {virtual} {override} void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables)
+	+ {virtual} {override} void Setup(TArray<FDMXImportGDTFDMXChannel> InputsAvailables)
 	+ {virtual} {override} void PushNormalizedRawValues(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedRawDMXValueMap& RawValuesMap)
 }
 
@@ -486,7 +486,7 @@ class CIEColorSourceFixtureComponent {
 	+ FCPDMXColorChannelData DMXChannelYY
 
 	+ UCPGDTFCIEColorSourceFixtureComponent()
-	+ {virtual} {override} void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables)
+	+ {virtual} {override} void Setup(TArray<FDMXImportGDTFDMXChannel> InputsAvailables)
 	+ {virtual} {override} void PushNormalizedRawValues(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedRawDMXValueMap& RawValuesMap)
 }
 
@@ -496,7 +496,7 @@ class HSVColorSourceFixtureComponent {
 	+ FCPDMXColorChannelData DMXChannelV
 
 	+ UCPGDTFHSVColorSourceFixtureComponent()
-	+ {virtual} {override} void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables)
+	+ {virtual} {override} void Setup(TArray<FDMXImportGDTFDMXChannel> InputsAvailables)
 	+ {virtual} {override} void PushNormalizedRawValues(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedRawDMXValueMap& RawValuesMap)
 }
 
@@ -513,7 +513,7 @@ class ColorWheelFixtureComponent {
 	+ int32 ChannelAddress
   
 	+ UCPGDTFColorWheelFixtureComponent()
-	+ {override} void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels)
+	+ {override} void Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels)
 	+ void BeginPlay()
 	+ {virtual} {override} void PushDMXRawValues(UDMXEntityFixturePatch* FixturePatch, const TMap<int32, int32>& RawValuesMap)
 	+ void ApplyEffectToBeam(int32 DMXValue)
@@ -528,7 +528,7 @@ class CTOFixtureComponent {
 	# float ColorTemperature
   
 	+ UCPGDTFCTOFixtureComponent()
-	+ {override} void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels)
+	+ {override} void Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels)
 	+ void BeginPlay()
 	+ {virtual} {override} void PushDMXRawValues(UDMXEntityFixturePatch* FixturePatch, const TMap<int32, int32>& RawValuesMap)
 	+ {override} void InterpolateComponent(float DeltaSeconds)
@@ -568,7 +568,7 @@ class GoboWheelFixtureComponent {
 	+ int32 AddressChannelTwo
 
 	+ UCPGDTFGoboWheelFixtureComponent()
-	+ {override} void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels)
+	+ {override} void Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels)
 	+ void BeginPlay()
 	+ {virtual} {override} void PushDMXRawValues(UDMXEntityFixturePatch* FixturePatch, const TMap<int32, int32>& RawValuesMap)
 	+ void ApplyEffectToBeam(int32 DMXValue, bool IsFirstChannel)
@@ -590,7 +590,7 @@ class ShutterFixtureComponent {
 	+ int32 ChannelAddress
 
 	+ UCPGDTFShutterFixtureComponent()
-	+ {override} void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels)
+	+ {override} void Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels)
 	+ void BeginPlay()
 	+ {virtual} {override} void PushDMXRawValues(UDMXEntityFixturePatch* FixturePatch, const TMap<int32, int32>& RawValuesMap)
 	+ void ApplyEffectToBeam(int32 DMXValue)
@@ -609,7 +609,7 @@ class FrostFixtureComponent {
 	+ int32 ChannelAddress
 
 	+ UCPGDTFFrostFixtureComponent()
-	+ {override} void Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels)
+	+ {override} void Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels)
 	+ void BeginPlay()
 	+ {virtual} {override} void PushDMXRawValues(UDMXEntityFixturePatch* FixturePatch, const TMap<int32, int32>& RawValuesMap)
 	+ void ApplyEffectToBeam(int32 DMXValue)
@@ -646,11 +646,11 @@ protected:
 
 	/// Geometry name
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Internal")
-	FName AttachedGeometryName;
+	TMap<ECPGDTFAttributeType, FName> AttachedGeometriesName;
 
 	/// Attached geometries
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "Internal")
-	USceneComponent* AttachedGeometry;
+	TMap<ECPGDTFAttributeType, USceneComponent*> AttachedGeometries;
 
 	/// Enable the PushDMXRawValues() method if we need no normalized values
 	UPROPERTY()
@@ -687,8 +687,23 @@ public:
 
 	// Initializes the component on spawn on a world
 	virtual void OnConstruction() {
-		this->AttachedBeams = this->GetParentFixtureActor()->GeometryTree.GetBeamsUnderGeometry(this->AttachedGeometryName);
-	};
+		TSet<UCPGDTFBeamSceneComponent*> beams;
+		for (FCPComponentChannelData ch : channels) {
+
+			FName geometryName = ch.GDTFDMXChannelDescription.Geometry;
+			TArray<UCPGDTFBeamSceneComponent*> bs = this->GetParentFixtureActor()->GeometryTree.GetBeamsUnderGeometry(geometryName);
+			for (UCPGDTFBeamSceneComponent* beam : bs) beams.Add(beam);
+			for (FDMXImportGDTFLogicalChannel lch : ch.GDTFDMXChannelDescription.LogicalChannels) {
+				ECPGDTFAttributeType type = CPGDTFDescription::GetGDTFAttributeTypeValueFromString(lch.Attribute.Name.ToString());
+				USceneComponent** geometry = this->GetParentFixtureActor()->GeometryTree.Components.Find(geometryName);
+				if(geometry)
+					this->AttachedGeometries.Add(type, *geometry);
+				this->AttachedGeometriesName.Add(type, geometryName);
+			}
+
+		}
+		this->AttachedBeams = beams.Array();
+	}
 
 	/// If attached to a DMX Fixture Actor, returns the parent fixture actor. 
 	UFUNCTION(BlueprintCallable, Category = "DMX")
@@ -879,7 +894,7 @@ protected:
 	 * @param interpolationId id of the interpolation we're updating
 +	 */
 	UFUNCTION(BlueprintCallable, Category = "DMX")
-	void SetTargetValue(float value, int interpolationId);
+	virtual void SetTargetValue(float value, int interpolationId);
 
 	/**
 	 * Updates the specified interpolation, by making it travel, ending the interpolation if it is done and "sending" the updated values to the light.
@@ -1052,7 +1067,7 @@ public:
 	 * @param attributeIndex index of the component, per component. This is useful where, EG, you have multiple wheels, blades, etc (Gobo0, Gobo1, Color0, etc). NOTE: this starts by 0!
 	 * @return true if everything went well (this could be used to check whenever we have all of the DMX channels
 	*/
-	virtual bool Setup(FName AttachedGeometryName, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex);
+	virtual bool Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex);
 	
 	/**
 	 * Called when we're starting the emulation. If you implement this method is MANDATORY you do a supercall to one of the BeginPlay() implementations,

@@ -1,0 +1,657 @@
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXEditor/Private/Factories/DMXGDTFImporter.cpp b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXEditor/Private/Factories/DMXGDTFImporter.cpp
+index 891933b24d..02214887f0 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXEditor/Private/Factories/DMXGDTFImporter.cpp
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXEditor/Private/Factories/DMXGDTFImporter.cpp
+@@ -529,10 +529,10 @@ UDMXImportGDTF* FDMXGDTFImporter::CreateGDTFDesctription()
+                                             ImportChannelFunction.ChannelSets.Add(ImportChannelSet);
+                                         }
+ 
+-                                        ImportLogicalChannel.ChannelFunction = ImportChannelFunction;
++                                        ImportLogicalChannel.ChannelFunctions.Add(ImportChannelFunction);
+                                     }
+ 
+-                                    ImportDMXChannel.LogicalChannel = ImportLogicalChannel;
++                                    ImportDMXChannel.LogicalChannels.Add(ImportLogicalChannel);
+                                 }
+ 
+                                 DMXImportGDTFDMXMode.DMXChannels.Add(ImportDMXChannel);
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Game/DMXComponent.cpp b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Game/DMXComponent.cpp
+index 63531e4ef4..eb8aa82e50 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Game/DMXComponent.cpp
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Game/DMXComponent.cpp
+@@ -35,19 +35,28 @@ void UDMXComponent::SetFixturePatch(UDMXEntityFixturePatch* InFixturePatch)
+ {
+ 	UDMXEntityFixturePatch* PreviousFixturePatch = FixturePatchRef.GetFixturePatch();
+ 
+-	if (InFixturePatch != PreviousFixturePatch)
+-	{
+-		// Remove the old receive binding
+-		if (IsValid(PreviousFixturePatch))
+-		{
+-			PreviousFixturePatch->OnFixturePatchReceivedDMX.RemoveAll(this);
++	if (this->HasBegunPlay()) {
++		if (InFixturePatch != PreviousFixturePatch) {
++			// Remove the old receive binding
++			if (IsValid(PreviousFixturePatch)) {
++				PreviousFixturePatch->OnFixturePatchReceivedDMX.RemoveAll(this);
++			}
++
++			// Set the new patch and setup the new binding
++			FixturePatchRef.SetEntity(InFixturePatch);
++			SetupReceiveDMXBinding();
++			UpdateTickEnabled();
+ 		}
++	}
+ 
+-		// Set the new patch and setup the new binding
+-		FixturePatchRef.SetEntity(InFixturePatch);
+-		SetupReceiveDMXBinding();
+-		UpdateTickEnabled();
++	#if WITH_EDITOR
++	else {
++		if (OnFixturePatchChanged.IsBound())
++		{
++			OnFixturePatchChanged.Broadcast(InFixturePatch);
++		}
+ 	}
++	#endif
+ }
+ 
+ void UDMXComponent::SetReceiveDMXFromPatch(bool bReceive)
+@@ -67,6 +76,14 @@ void UDMXComponent::OnFixturePatchReceivedDMX(UDMXEntityFixturePatch* FixturePat
+ 	}
+ }
+ 
++void UDMXComponent::OnFixturePatchReceivedDMXRaw(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedRawDMXValueMap& RawValues) {
++	#if WITH_EDITOR
++	FEditorScriptExecutionGuard ScriptGuard;
++	#endif
++
++	OnDMXReceivedRaw.Broadcast(FixturePatch, RawValues);
++}
++
+ void UDMXComponent::SetupReceiveDMXBinding()
+ {
+ 	UDMXEntityFixturePatch* FixturePatch = FixturePatchRef.GetFixturePatch();
+@@ -87,23 +104,38 @@ void UDMXComponent::SetupReceiveDMXBinding()
+ 			return bReceiveDMXFromPatch;
+ 		}();
+ 		
+-		if (bReceiveDMX && !FixturePatch->OnFixturePatchReceivedDMX.Contains(this, GET_FUNCTION_NAME_CHECKED(UDMXComponent, OnFixturePatchReceivedDMX)))
++		if (bReceiveDMX)
+ 		{
+-			// Enable receive DMX
+-			FixturePatch->OnFixturePatchReceivedDMX.AddDynamic(this, &UDMXComponent::OnFixturePatchReceivedDMX);
++			if (!FixturePatch->OnFixturePatchReceivedDMX.Contains(this, GET_FUNCTION_NAME_CHECKED(UDMXComponent, OnFixturePatchReceivedDMX)))
++			{
++				// Enable receive DMX
++				FixturePatch->OnFixturePatchReceivedDMX.AddDynamic(this, &UDMXComponent::OnFixturePatchReceivedDMX);
+ 
+-			FDMXNormalizedAttributeValueMap NormalizeAttributeValues;
+-			FixturePatch->GetNormalizedAttributesValues(NormalizeAttributeValues);
++				FDMXNormalizedAttributeValueMap NormalizeAttributeValues;
++				FixturePatch->GetNormalizedAttributesValues(NormalizeAttributeValues);
+ 
+-			if (NormalizeAttributeValues.Map.Num() > 0)
++				if (NormalizeAttributeValues.Map.Num() > 0) {
++					OnFixturePatchReceived.Broadcast(FixturePatch, NormalizeAttributeValues);
++				}
++			}
++			if (!FixturePatch->OnFixturePatchReceivedDMXRaw.Contains(this, GET_FUNCTION_NAME_CHECKED(UDMXComponent, OnFixturePatchReceivedDMXRaw)))
+ 			{
+-				OnFixturePatchReceived.Broadcast(FixturePatch, NormalizeAttributeValues);
++				// Enable receive DMX
++				FixturePatch->OnFixturePatchReceivedDMXRaw.AddDynamic(this, &UDMXComponent::OnFixturePatchReceivedDMXRaw);
++
++				FDMXNormalizedRawDMXValueMap NormalizedRawDMXValueMap;
++				FixturePatch->GetNormalizedRawChannelsValues(NormalizedRawDMXValueMap);
++
++				if (NormalizedRawDMXValueMap.Map.Num() > 0) {
++					OnDMXReceivedRaw.Broadcast(FixturePatch, NormalizedRawDMXValueMap);
++				}
+ 			}
+ 		}
+ 		else if (!bReceiveDMX)
+ 		{			
+ 			// Disable receive DMX
+ 			FixturePatch->OnFixturePatchReceivedDMX.RemoveAll(this);
++			FixturePatch->OnFixturePatchReceivedDMXRaw.RemoveAll(this);
+ 		}
+ 	}
+ }
+@@ -165,6 +197,13 @@ void UDMXComponent::BeginPlay()
+ 		{
+ 			OnFixturePatchReceived.Broadcast(FixturePatch, NormalizeAttributeValues);
+ 		}
++
++		FDMXNormalizedRawDMXValueMap NormalizedRawDMXValueMap;
++		FixturePatch->GetNormalizedRawChannelsValues(NormalizedRawDMXValueMap);
++
++		if (NormalizedRawDMXValueMap.Map.Num() > 0) {
++			OnDMXReceivedRaw.Broadcast(FixturePatch, NormalizedRawDMXValueMap);
++		}
+ 	}
+ 
+ 	SetupReceiveDMXBinding();
+@@ -190,6 +229,7 @@ void UDMXComponent::DestroyComponent(bool bPromoteChildren)
+ 	if (IsValid(FixturePatch))
+ 	{
+ 		FixturePatch->OnFixturePatchReceivedDMX.RemoveAll(this);
++		FixturePatch->OnFixturePatchReceivedDMXRaw.RemoveAll(this);
+ 	}
+ }
+ 
+@@ -226,6 +266,10 @@ void UDMXComponent::OnFixturePatchPropertiesChanged(const UDMXEntityFixturePatch
+ 	if (FixturePatch == GetFixturePatch())
+ 	{
+ 		UpdateTickEnabled();
++		if (OnFixturePatchChanged.IsBound())
++		{
++			OnFixturePatchChanged.Broadcast(GetFixturePatch());
++		}
+ 	}
+ }
+ #endif // WITH_EDITOR
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixturePatch.cpp b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixturePatch.cpp
+index 4e9456a0cb..ee0913f2b9 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixturePatch.cpp
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixturePatch.cpp
+@@ -233,17 +233,22 @@ void UDMXEntityFixturePatch::Tick(float DeltaTime)
+ 		{
+ 			OnFixturePatchReceivedDMX.Broadcast(this, *NormalizedAttributeValuesPtr);
+ 		}
++
++		if (const FDMXNormalizedRawDMXValueMap* NormalizedRawDMXValuesMapPtr = Cache.GetAllNormalizedRawDMXValues())
++		{
++			OnFixturePatchReceivedDMXRaw.Broadcast(this, *NormalizedRawDMXValuesMapPtr);
++		}
+ 	}
+ }
+ 
+ bool UDMXEntityFixturePatch::IsTickable() const
+ {
+-	return OnFixturePatchReceivedDMX.IsBound();
++	return OnFixturePatchReceivedDMX.IsBound() || OnFixturePatchReceivedDMXRaw.IsBound();
+ }
+ 
+ bool UDMXEntityFixturePatch::IsTickableInEditor() const
+ {
+-	const bool bHasListener = OnFixturePatchReceivedDMX.IsBound();
++	const bool bHasListener = this->IsTickable();
+ 	if (!bHasListener)
+ 	{
+ 		return false;
+@@ -847,6 +852,20 @@ void UDMXEntityFixturePatch::GetAttributesValues(TMap<FDMXAttributeName, int32>&
+ 	}
+ }
+ 
++void UDMXEntityFixturePatch::GetRawChannelsValues(TMap<int32, int32>& RawChannelsValues) {
++
++	RawChannelsValues.Reset();
++
++	// Update the cache if it isn't updated on tick
++	if (!IsTickable()) {
++		UpdateCache();
++	}
++
++	if (const TMap<int32, int32>* RawChannelsValuesPtr = Cache.GetAllRawDMXValues()) {
++		RawChannelsValues = *RawChannelsValuesPtr;
++	}
++}
++
+ void UDMXEntityFixturePatch::GetNormalizedAttributesValues(FDMXNormalizedAttributeValueMap& NormalizedAttributesValues)
+ {
+ 	// Update the cache if it isn't updated on tick
+@@ -861,6 +880,17 @@ void UDMXEntityFixturePatch::GetNormalizedAttributesValues(FDMXNormalizedAttribu
+ 	}
+ }
+ 
++void UDMXEntityFixturePatch::GetNormalizedRawChannelsValues(FDMXNormalizedRawDMXValueMap& NormalizedRawChannelsValues) {
++	// Update the cache if it isn't updated on tick
++	if (!IsTickable()) {
++		UpdateCache();
++	}
++
++	if (const FDMXNormalizedRawDMXValueMap* NormalizedRawChannelsValuesPtr = Cache.GetAllNormalizedRawDMXValues()) {
++		NormalizedRawChannelsValues = *NormalizedRawChannelsValuesPtr;
++	}
++}
++
+ bool UDMXEntityFixturePatch::SendMatrixCellValue(const FIntPoint& CellCoordinate, const FDMXAttributeName& Attribute, int32 Value)
+ {
+ 	if (UDMXLibrary* DMXLibrary = ParentLibrary.Get())
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixturePatchCache.cpp b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixturePatchCache.cpp
+index 88074f4435..7d7410e214 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixturePatchCache.cpp
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixturePatchCache.cpp
+@@ -132,6 +132,8 @@ bool FDMXEntityFixturePatchCache::InputDMXSignal(const FDMXSignalSharedPtr& DMXS
+ 			// Update raw and normalized values per attribute cache
+ 			CachedRawValuesPerAttribute.Reset();
+ 			CachedNormalizedValuesPerAttribute.Map.Reset();
++			CachedRawDMXValues.Reset();
++			CachedNormalizedRawDMXValues.Map.Reset();
+ 
+ 			for (const FDMXFixtureFunction& Function : Mode.Functions)
+ 			{
+@@ -144,9 +146,11 @@ bool FDMXEntityFixturePatchCache::InputDMXSignal(const FDMXSignalSharedPtr& DMXS
+ 
+ 				const uint32 IntValue = UDMXEntityFixtureType::BytesToFunctionValue(Function, CachedDMXValues.GetData() + FunctionStartIndex);
+ 				CachedRawValuesPerAttribute.Add(Function.Attribute, IntValue);
++				CachedRawDMXValues.Add(Function.Channel, IntValue);
+ 
+ 				const float NormalizedValue = (float)IntValue / (float)FDMXConversions::GetSignalFormatMaxValue(Function.DataType);
+ 				CachedNormalizedValuesPerAttribute.Map.Add(Function.Attribute, NormalizedValue);
++				CachedNormalizedRawDMXValues.Map.Add(Function.Channel, NormalizedValue);
+ 			}
+ 
+ 			// Update raw and normalized values per matrix cell cache
+@@ -208,6 +212,9 @@ void FDMXEntityFixturePatchCache::Reset()
+ 	{
+ 		CachedDMXValues.Reset();
+ 
++		CachedRawDMXValues.Reset();
++		CachedNormalizedRawDMXValues.Map.Reset();
++
+ 		CachedRawValuesPerAttribute.Reset();
+ 		CachedNormalizedValuesPerAttribute.Map.Reset();
+ 
+@@ -251,6 +258,17 @@ const TMap<FDMXAttributeName, int32>* FDMXEntityFixturePatchCache::GetAllRawAttr
+ 	return nullptr;
+ }
+ 
++const TMap<int32, int32>* FDMXEntityFixturePatchCache::GetAllRawDMXValues() const
++{
++	if (bValid)
++	{
++		return &CachedRawDMXValues;
++	}
++
++	return nullptr;
++
++}
++
+ const float* FDMXEntityFixturePatchCache::GetNormalizedAttributeValue(const FDMXAttributeName& AttributeName) const
+ {
+ 	if (bValid)
+@@ -261,6 +279,16 @@ const float* FDMXEntityFixturePatchCache::GetNormalizedAttributeValue(const FDMX
+ 	return nullptr;
+ }
+ 
++const FDMXNormalizedRawDMXValueMap* FDMXEntityFixturePatchCache::GetAllNormalizedRawDMXValues() const
++{
++	if (bValid)
++	{
++		return &CachedNormalizedRawDMXValues;
++	}
++
++	return nullptr;
++}
++
+ const FDMXNormalizedAttributeValueMap* FDMXEntityFixturePatchCache::GetAllNormalizedAttributeValues() const
+ {
+ 	if (bValid)
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixtureType.cpp b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixtureType.cpp
+index cd587b0a10..98f2808264 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixtureType.cpp
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXEntityFixtureType.cpp
+@@ -323,7 +323,7 @@ void UDMXEntityFixtureType::SetModesFromDMXImport(UDMXImport* DMXImportAsset)
+ 			TMap<FString, uint32> PotentialFunctionNamesAndCount;
+ 			for (const FDMXImportGDTFDMXChannel& ModeChannel : AssetMode.DMXChannels)
+ 			{
+-				FString FunctionName = ModeChannel.LogicalChannel.Attribute.Name.ToString();
++				FString FunctionName = ModeChannel.LogicalChannels[0].Attribute.Name.ToString();
+ 
+ 				PotentialFunctionNamesAndCount.Add(FunctionName, 0);
+ 			}
+@@ -332,7 +332,7 @@ void UDMXEntityFixtureType::SetModesFromDMXImport(UDMXImport* DMXImportAsset)
+ 			for (const FDMXImportGDTFDMXChannel& ModeChannel : AssetMode.DMXChannels)
+ 			{
+ 				FDMXFixtureFunction& Function = Mode.Functions[Mode.Functions.Emplace()];
+-				Function.FunctionName = FDMXRuntimeUtils::GenerateUniqueNameForImportFunction(PotentialFunctionNamesAndCount, ModeChannel.LogicalChannel.Attribute.Name.ToString());
++				Function.FunctionName = FDMXRuntimeUtils::GenerateUniqueNameForImportFunction(PotentialFunctionNamesAndCount, ModeChannel.LogicalChannels[0].Attribute.Name.ToString());
+ 				Function.DefaultValue = ModeChannel.Default.Value;
+ 				Function.Channel = FunctionStartingChannel;
+ 
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXImport.cpp b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXImport.cpp
+index a0969b6ac3..76d3d0f0e6 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXImport.cpp
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXImport.cpp
+@@ -26,7 +26,7 @@ namespace DMXImport
+ 				}
+ 				else if (ColorStrIndex == 2)
+ 				{
+-					LexTryParseString<uint8>(ColorCIE.YY, *ColorCIEArray[2]);
++					LexTryParseString<float>(ColorCIE.YY, *ColorCIEArray[2]);
+ 				}
+ 			}
+ 		}
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXImportGDTF.cpp b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXImportGDTF.cpp
+index 0509683ac0..fe2d2c40c6 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXImportGDTF.cpp
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Private/Library/DMXImportGDTF.cpp
+@@ -143,7 +143,13 @@ TArray<FDMXImportGDTFChannelFunction> UDMXImportGDTFDMXModes::GetDMXChannelFunct
+ 	TArray<FDMXImportGDTFChannelFunction> Channels;
+ 	for (const FDMXImportGDTFDMXChannel& ModeChannel : InMode.DMXChannels)
+ 	{
+-		Channels.Add(ModeChannel.LogicalChannel.ChannelFunction);
++		for (const FDMXImportGDTFLogicalChannel LogicalChannel : ModeChannel.LogicalChannels)
++		{
++			for (const FDMXImportGDTFChannelFunction ChannelFunction : LogicalChannel.ChannelFunctions)
++			{
++				Channels.Add(ChannelFunction);
++			}
++		}
+ 	}
+ 	return MoveTemp(Channels);
+ };
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/DMXTypes.h b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/DMXTypes.h
+index b0e609d1b3..431efdf54b 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/DMXTypes.h
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/DMXTypes.h
+@@ -23,6 +23,15 @@ struct DMXRUNTIME_API FDMXNormalizedAttributeValueMap
+ 	TMap<FDMXAttributeName, float> Map;
+ };
+ 
++/** Holds an array of raw DMX channels numbering with their normalized Values (expand the property to see the map) */
++USTRUCT(BlueprintType, Category = "DMX")
++struct DMXRUNTIME_API FDMXNormalizedRawDMXValueMap
++{
++	GENERATED_BODY()
++
++	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "DMX")
++		TMap<int32, float> Map;
++};
+ 
+ /** xyY color representation in the CIE 1931 color space, as typically used in GDTF and MVR */
+ USTRUCT(BlueprintType, Category = "DMX")
+@@ -119,7 +128,6 @@ struct TStructOpsTypeTraits<FDMXByteArray64>
+ 	};
+ };
+ 
+-
+ USTRUCT(BlueprintType)
+ struct FDMXRequestBase
+ {
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Game/DMXComponent.h b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Game/DMXComponent.h
+index 270dd29b48..8862caa0f7 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Game/DMXComponent.h
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Game/DMXComponent.h
+@@ -26,14 +26,22 @@ class DMXRUNTIME_API UDMXComponent
+ 	GENERATED_BODY()
+ 
+ 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDMXComponentFixturePatchReceivedSignature, UDMXEntityFixturePatch*, FixturePatch, const FDMXNormalizedAttributeValueMap&, ValuePerAttribute);
++	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDMXComponentDMXReceivedRawSignature, UDMXEntityFixturePatch*, FixturePatch, const FDMXNormalizedRawDMXValueMap&, RawDMXValues);
+ 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDMXOnDMXComponentTickSignature, float, DeltaTime);
+ 
+ public:
+ 	UDMXComponent();
+ 
++	/** Broadcast when the component's fixture patch changed */
++	DECLARE_EVENT_OneParam(UDMXComponent, FOnFixturePatchChangedEvent, const UDMXEntityFixturePatch*)
++	FOnFixturePatchChangedEvent OnFixturePatchChanged;
++
+ 	/** Broadcast when the component's fixture patch received DMX */
+ 	UPROPERTY(BlueprintAssignable, Category = "DMX");
+-	FDMXComponentFixturePatchReceivedSignature OnFixturePatchReceived;
++		FDMXComponentFixturePatchReceivedSignature OnFixturePatchReceived;
++
++	UPROPERTY(BlueprintAssignable, Category = "DMX", Meta = (DisplayName = "On DMX Received RAW"))
++		FDMXComponentDMXReceivedRawSignature OnDMXReceivedRaw;
+ 
+ 	/**
+ 	 * Event raised each tick, when the component has a Fixture Patch set and either:
+@@ -41,7 +49,7 @@ public:
+ 	 * - Project Settings -> Plugins -> DMX -> 'Fixture Patches receive DMX in Editor' is set to true.
+ 	 */
+ 	UPROPERTY(BlueprintAssignable, Category = "DMX", Meta = (DisplayName = "On DMX Component Tick"))
+-	FDMXOnDMXComponentTickSignature OnDMXComponentTick;
++		FDMXOnDMXComponentTickSignature OnDMXComponentTick;
+ 
+ 	/** Gets the fixture patch used in the component */
+ 	UFUNCTION(BlueprintPure, Category = "DMX")
+@@ -63,6 +71,10 @@ protected:
+ 	UFUNCTION()
+ 	void OnFixturePatchReceivedDMX(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedAttributeValueMap& NormalizedValuePerAttribute);
+ 
++	/** Called when the fixture patch received DMX */
++	UFUNCTION()
++		void OnFixturePatchReceivedDMXRaw(UDMXEntityFixturePatch* FixturePatch, const FDMXNormalizedRawDMXValueMap& RawValues);
++
+ 	/** Sets up binding for receiving depending on the patch's and the component's properties */
+ 	void SetupReceiveDMXBinding();
+ 
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXEntityFixturePatch.h b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXEntityFixturePatch.h
+index d40c2dc824..add25f138d 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXEntityFixturePatch.h
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXEntityFixturePatch.h
+@@ -71,6 +71,7 @@ class DMXRUNTIME_API UDMXEntityFixturePatch
+ 	GENERATED_BODY()
+ 
+ 	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDMXOnFixturePatchReceivedDMXDelegate, UDMXEntityFixturePatch*, FixturePatch, const FDMXNormalizedAttributeValueMap&, ValuePerAttribute);
++	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FDMXOnFixturePatchReceivedDMXRawDelegate, UDMXEntityFixturePatch*, FixturePatch, const FDMXNormalizedRawDMXValueMap&, RawValues);
+ 
+ public:
+ 	UDMXEntityFixturePatch();
+@@ -127,6 +128,10 @@ public:
+ 	UPROPERTY(BlueprintAssignable, Category = "DMX");
+ 	FDMXOnFixturePatchReceivedDMXDelegate OnFixturePatchReceivedDMX;
+ 
++	/** Broadcasts when the patch received dmx */
++	UPROPERTY(BlueprintAssignable, Category = "DMX");
++	FDMXOnFixturePatchReceivedDMXRawDelegate OnFixturePatchReceivedDMXRaw;
++
+ private:
+ 	/** Updates the cache. Returns true if the values got updated (if the values changed) */
+ 	bool UpdateCache();
+@@ -410,6 +415,14 @@ public:
+ 	UFUNCTION(BlueprintCallable, Category = "DMX|Fixture Patch")
+ 	void GetAttributesValues(TMap<FDMXAttributeName, int32>& AttributesValues);
+ 
++	/**
++	 * Returns the value of each DMX channel, or zero if no value was ever received.
++	 *
++	 * @param RawChannelsValues	Out: Resulting map of DMX channels with their values
++	 */
++	UFUNCTION(BlueprintCallable, Category = "DMX|Fixture Patch")
++		void GetRawChannelsValues(TMap<int32, int32>& RawChannelsValues);
++
+ 	/**
+ 	 * Returns the normalized value of each attribute, or zero if no value was ever received.
+ 	 *
+@@ -418,6 +431,14 @@ public:
+ 	UFUNCTION(BlueprintCallable, Category = "DMX|Fixture Patch")
+ 	void GetNormalizedAttributesValues(FDMXNormalizedAttributeValueMap& NormalizedAttributesValues);
+ 
++	/**
++	 * Returns the normalized value of each DMX channel, or zero if no value was ever received.
++	 *
++	 * @param NormalizedRawChannelsValues	Out: Resulting map of DMX Channels with their normalized values
++	 */
++	UFUNCTION(BlueprintCallable, Category = "DMX|Fixture Patch")
++		void GetNormalizedRawChannelsValues(FDMXNormalizedRawDMXValueMap& NormalizedRawChannelsValues);
++
+ 	/** Sends the DMX value of the Attribute to specified matrix coordinates */
+ 	UFUNCTION(BlueprintCallable, Category = "DMX|Fixture Patch")
+ 	bool SendMatrixCellValue(const FIntPoint& CellCoordinate /* Cell coordinate X/Y */, const FDMXAttributeName& Attribute, int32 Value);
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXEntityFixturePatchCache.h b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXEntityFixturePatchCache.h
+index 8c661452a5..589acab71b 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXEntityFixturePatchCache.h
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXEntityFixturePatchCache.h
+@@ -8,8 +8,8 @@
+ #include "CoreMinimal.h"
+ 
+ struct FDMXAttributeName;
+-struct FDMXNormalizedAttributeValueMap;
+-struct FDMXRawAttributeValueMap;
++//struct FDMXNormalizedAttributeValueMap;
++//struct FDMXNormalizedRawDMXValueMap;
+ class UDMXModulator;
+ 
+ 
+@@ -59,12 +59,18 @@ public:
+ 	/** Returns all raw attribute values. Returns nullptr if there is no data */
+ 	const TMap<FDMXAttributeName, int32>* GetAllRawAttributeValues() const;
+ 
++	/** Returns all raw DMXChannels values. Returns nullptr if there is no data */
++	const TMap<int32, int32>* GetAllRawDMXValues() const;
++
+ 	/** Returns the raw attribute value for the specified Attribute Name. Returns nullptr if the attribute cannot be found */
+ 	const float* GetNormalizedAttributeValue(const FDMXAttributeName& AttributeName) const;
+ 
+-	/** Returns all raw attribute values. Returns nullptr if there is no data */
++	/** Returns all normalized attribute values. Returns nullptr if there is no data */
+ 	const FDMXNormalizedAttributeValueMap* GetAllNormalizedAttributeValues() const;
+ 
++	/** Returns all normalized DMXChannels values. Returns nullptr if there is no data */
++	const FDMXNormalizedRawDMXValueMap* GetAllNormalizedRawDMXValues() const;
++
+ 	/** Returns a pixel mapping distribution ordered Cell Index from a Cell Coordinate, or INDEX_NONE if not a valid index */
+ 	int32 GetDistributedCellIndex(const FIntPoint& CellCoordinate) const;
+ 
+@@ -162,6 +168,15 @@ private:
+ 	 */
+ 	TArray<uint8> CachedDMXValues;
+ 
++	/**
++	 * Raw values but grouped by FDMXFixtureFunction.
++	 * The key is the number of the first channel
++	 */
++	TMap<int32, int32> CachedRawDMXValues;
++
++	/** Raw normalized values but grouped by FDMXFixtureFunction. */
++	FDMXNormalizedRawDMXValueMap CachedNormalizedRawDMXValues;
++
+ 	/** Map of latest normalized values per (non-matrix) attribute */
+ 	TMap<FDMXAttributeName, int32> CachedRawValuesPerAttribute;
+ 
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXImport.h b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXImport.h
+index cfc79697c9..d2b72ad108 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXImport.h
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXImport.h
+@@ -26,7 +26,7 @@ struct FDMXColorCIE
+         FDMXColorCIE()
+         : X(0.f)
+         , Y(0.f)
+-        , YY(0)
++        , YY(0.f)
+     {}
+ 
+     UPROPERTY(EditAnywhere, Category = Color, meta = (ClampMin = "0", ClampMax = "1.0"))
+@@ -35,8 +35,8 @@ struct FDMXColorCIE
+     UPROPERTY(EditAnywhere, Category = Color, meta = (ClampMin = "0", ClampMax = "1.0"))
+     float Y;
+ 
+-    UPROPERTY(EditAnywhere, Category = Color, meta = (ClampMin = "0", ClampMax = "255"))
+-    uint8 YY;
++    UPROPERTY(EditAnywhere, Category = Color, meta = (ClampMin = "0", ClampMax = "100"))
++    float YY;
+ };
+ 
+ UCLASS(BlueprintType, Blueprintable)
+diff --git a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXImportGDTF.h b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXImportGDTF.h
+index adc722e1c7..eefa78494d 100644
+--- a/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXImportGDTF.h
++++ b/Engine/Plugins/VirtualProduction/DMX/DMXEngine/Source/DMXRuntime/Public/Library/DMXImportGDTF.h
+@@ -152,6 +152,39 @@ struct DMXRUNTIME_API FDMXImportGDTFFeatureGroup
+     TArray<FDMXImportGDTFFeature> Features;
+ };
+ 
++UENUM(BlueprintType)
++enum class EDMXImportGDTFSubPhysicalUnitType : uint8 {
++	PlacementOffset,
++	Amplitude,
++	AmplitudeMin,
++	AmplitudeMax,
++	Duration,
++	DutyCycle,
++	TimeOffset,
++	MinimumOpening,
++	Value,
++	RatioHorizontal,
++	RatioVertical
++};
++
++USTRUCT(BlueprintType)
++struct DMXRUNTIME_API FDMXImportGDTFSubPhysicalUnit
++{
++	GENERATED_BODY()
++
++	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DMX")
++	EDMXImportGDTFSubPhysicalUnitType Type = EDMXImportGDTFSubPhysicalUnitType::Value;
++
++	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DMX")
++	EDMXImportGDTFPhysicalUnit PhysicalUnit = EDMXImportGDTFPhysicalUnit::None;
++
++	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DMX")
++	float PhysicalFrom = 0.f;
++
++	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DMX")
++	float PhysicalTo = 0.f;
++};
++
+ USTRUCT(BlueprintType)
+ struct DMXRUNTIME_API FDMXImportGDTFAttribute
+ {
+@@ -177,6 +210,9 @@ struct DMXRUNTIME_API FDMXImportGDTFAttribute
+ 
+     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DMX")
+     FDMXColorCIE Color;
++
++	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DMX")
++	TArray<FDMXImportGDTFSubPhysicalUnit> SubPhysicalUnits;
+ };
+ 
+ USTRUCT(BlueprintType)
+@@ -539,6 +575,10 @@ struct FDMXImportGDTFChannelFunction
+ {
+     GENERATED_BODY()
+ 
++	//Each channel function has their own default value that may be different from the "global" DMXChannel default value
++	UPROPERTY(EditAnywhere, BlueprintReadOnly, BlueprintReadOnly, Category = "DMX")
++	FDMXImportGDTFDMXValue Default;
++
+     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DMX")
+     FName Name;
+ 
+@@ -562,6 +602,9 @@ struct FDMXImportGDTFChannelFunction
+ 
+     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DMX")
+     float RealFade = 0.f;
++	
++	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DMX")
++    float RealAcceleration = 0.f;
+ 
+     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DMX")
+     FDMXImportGDTFWheel Wheel;
+@@ -609,7 +652,10 @@ struct FDMXImportGDTFLogicalChannel
+     float DMXChangeTimeLimit = 0.f;
+ 
+     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "DMX")
+-    FDMXImportGDTFChannelFunction ChannelFunction;
++    TArray<FDMXImportGDTFChannelFunction> ChannelFunctions;
++
++    UPROPERTY(meta = (DeprecatedProperty, DeprecationMessage = "Use ChannelFunctions array instead."))
++    FDMXImportGDTFChannelFunction ChannelFunction_DEPRECATED;
+ };
+ 
+ USTRUCT(BlueprintType)
+@@ -626,6 +672,7 @@ struct DMXRUNTIME_API FDMXImportGDTFDMXChannel
+     UPROPERTY(EditAnywhere, BlueprintReadOnly, BlueprintReadOnly, Category = "DMX")
+     TArray<int32> Offset;
+ 
++	//Default value of the entire FDMXImportGDTFDMXChannel. This is obtained through the attribute InitialFunction
+     UPROPERTY(EditAnywhere, BlueprintReadOnly, BlueprintReadOnly, Category = "DMX")
+     FDMXImportGDTFDMXValue Default;
+ 
+@@ -636,7 +683,10 @@ struct DMXRUNTIME_API FDMXImportGDTFDMXChannel
+     FName Geometry;
+ 
+     UPROPERTY(EditAnywhere, BlueprintReadOnly, BlueprintReadOnly, Category = "DMX")
+-    FDMXImportGDTFLogicalChannel LogicalChannel;
++    TArray<FDMXImportGDTFLogicalChannel> LogicalChannels;
++
++    UPROPERTY(meta = (DeprecatedProperty, DeprecationMessage = "Use LogicalChannels array instead."))
++    FDMXImportGDTFLogicalChannel LogicalChannel_DEPRECATED;
+ };
+ 
+ USTRUCT(BlueprintType)

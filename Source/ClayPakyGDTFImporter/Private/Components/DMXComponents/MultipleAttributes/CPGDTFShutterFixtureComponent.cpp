@@ -28,8 +28,8 @@ SOFTWARE.
 #include "Kismet/KismetMathLibrary.h"
 #include "PackageTools.h"
 
-bool UCPGDTFShutterFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
-	Super::Setup(AttachedGeometryNamee, DMXChannels, attributeIndex);
+bool UCPGDTFShutterFixtureComponent::Setup(TArray<FDMXImportGDTFDMXChannel> DMXChannels, int attributeIndex) {
+	Super::Setup(DMXChannels, attributeIndex);
 	this->bIsRawDMXEnabled = true;
 	return true;
 }
@@ -102,57 +102,53 @@ TArray<TSet<ECPGDTFAttributeType>> UCPGDTFShutterFixtureComponent::getAttributeG
  */
 void UCPGDTFShutterFixtureComponent::ApplyEffectToBeam(int32 DMXValue, FCPComponentChannelData& channel, TTuple<FCPGDTFDescriptionChannelFunction*, FCPGDTFDescriptionChannelSet*>& DMXBehaviour, ECPGDTFAttributeType& AttributeType, float physicalValue) {
 	switch (AttributeType) {
+		case ECPGDTFAttributeType::Shutter_n_:
+		case ECPGDTFAttributeType::StrobeModeShutter:
+			if (channel.RunningEffectTypeChannel != AttributeType) this->SetValueNoInterp(0, InterpolationIds::STROBE);
+			this->SetValueNoInterp(physicalValue, InterpolationIds::INTENSITY);
+			break;
 
-	case ECPGDTFAttributeType::Shutter_n_:
-	case ECPGDTFAttributeType::StrobeModeShutter:
-		if (channel.RunningEffectTypeChannel != AttributeType) this->SetValueNoInterp(0, InterpolationIds::STROBE);
-		this->SetValueNoInterp(physicalValue, InterpolationIds::INTENSITY);
-		break;
+		case ECPGDTFAttributeType::Shutter_n_Strobe:
+		case ECPGDTFAttributeType::Shutter_n_StrobeEffect: // I don't understand the difference with Shutter_n_Strobe
+		case ECPGDTFAttributeType::StrobeFrequency:
+		case ECPGDTFAttributeType::StrobeModeStrobe:
+		case ECPGDTFAttributeType::StrobeModeEffect: // I don't understand the difference with StrobeModeStrobe
+			if (channel.RunningEffectTypeChannel != AttributeType) this->SetValueNoInterp(1, InterpolationIds::INTENSITY);
+			this->SetValueNoInterp(physicalValue, InterpolationIds::STROBE);
+			break;
 
-	case ECPGDTFAttributeType::Shutter_n_Strobe:
-	case ECPGDTFAttributeType::Shutter_n_StrobeEffect: // I don't understand the difference with Shutter_n_Strobe
-	case ECPGDTFAttributeType::StrobeFrequency:
-	case ECPGDTFAttributeType::StrobeModeStrobe:
-	case ECPGDTFAttributeType::StrobeModeEffect: // I don't understand the difference with StrobeModeStrobe
-		if (channel.RunningEffectTypeChannel != AttributeType) this->SetValueNoInterp(1, InterpolationIds::INTENSITY);
-		this->SetValueNoInterp(physicalValue, InterpolationIds::STROBE);
-		break;
+		case ECPGDTFAttributeType::Shutter_n_StrobeRandom:
+		case ECPGDTFAttributeType::StrobeModeRandom:
+			this->StartRandomEffect(DMXValue, DMXBehaviour.Key, DMXBehaviour.Value);
+			if (channel.RunningEffectTypeChannel != AttributeType) {
+				this->RandomCurrentTime = 0;
+				this->SetValueNoInterp(1, InterpolationIds::INTENSITY);
+			}
+			this->SetValueNoInterp(this->RandomCurrentFrequency, InterpolationIds::STROBE);
+			break;
 
-	case ECPGDTFAttributeType::Shutter_n_StrobeRandom:
-	case ECPGDTFAttributeType::StrobeModeRandom:
-		this->StartRandomEffect(DMXValue, DMXBehaviour.Key, DMXBehaviour.Value);
-		if (channel.RunningEffectTypeChannel != AttributeType) {
-			this->RandomCurrentTime = 0;
-			this->SetValueNoInterp(1, InterpolationIds::INTENSITY);
-		}
-		this->SetValueNoInterp(this->RandomCurrentFrequency, InterpolationIds::STROBE);
-		break;
+		case ECPGDTFAttributeType::Shutter_n_StrobePulse:
+		case ECPGDTFAttributeType::Shutter_n_StrobePulseOpen:
+		case ECPGDTFAttributeType::Shutter_n_StrobePulseClose:
+		case ECPGDTFAttributeType::StrobeModePulse:
+		case ECPGDTFAttributeType::StrobeModePulseOpen:
+		case ECPGDTFAttributeType::StrobeModePulseClose:
+			if (channel.RunningEffectTypeChannel != AttributeType) this->StartPulseEffect(AttributeType, 1 / physicalValue, DMXBehaviour.Key);
+			else this->PulseManager.ChangePeriod(1 / physicalValue);
+			break;
 
-	case ECPGDTFAttributeType::Shutter_n_StrobePulse:
-	case ECPGDTFAttributeType::Shutter_n_StrobePulseOpen:
-	case ECPGDTFAttributeType::Shutter_n_StrobePulseClose:
-	case ECPGDTFAttributeType::StrobeModePulse:
-	case ECPGDTFAttributeType::StrobeModePulseOpen:
-	case ECPGDTFAttributeType::StrobeModePulseClose:
-		if (channel.RunningEffectTypeChannel != AttributeType) this->StartPulseEffect(AttributeType, 1 / physicalValue, DMXBehaviour.Key);
-		else this->PulseManager.ChangePeriod(1 / physicalValue);
-		break;
+		case ECPGDTFAttributeType::Shutter_n_StrobeRandomPulse:
+		case ECPGDTFAttributeType::Shutter_n_StrobeRandomPulseOpen:
+		case ECPGDTFAttributeType::Shutter_n_StrobeRandomPulseClose:
+		case ECPGDTFAttributeType::StrobeModeRandomPulse:
+		case ECPGDTFAttributeType::StrobeModeRandomPulseOpen:
+		case ECPGDTFAttributeType::StrobeModeRandomPulseClose:
+			this->StartRandomEffect(DMXValue, DMXBehaviour.Key, DMXBehaviour.Value);
+			if (channel.RunningEffectTypeChannel == AttributeType) this->StartPulseEffect(AttributeType, this->RandomCurrentFrequency, DMXBehaviour.Key);
+			else this->RandomCurrentTime = 0;
+			break;
 
-	case ECPGDTFAttributeType::Shutter_n_StrobeRandomPulse:
-	case ECPGDTFAttributeType::Shutter_n_StrobeRandomPulseOpen:
-	case ECPGDTFAttributeType::Shutter_n_StrobeRandomPulseClose:
-	case ECPGDTFAttributeType::StrobeModeRandomPulse:
-	case ECPGDTFAttributeType::StrobeModeRandomPulseOpen:
-	case ECPGDTFAttributeType::StrobeModeRandomPulseClose:
-		this->StartRandomEffect(DMXValue, DMXBehaviour.Key, DMXBehaviour.Value);
-		if (channel.RunningEffectTypeChannel == AttributeType) this->StartPulseEffect(AttributeType, this->RandomCurrentFrequency, DMXBehaviour.Key);
-		else this->RandomCurrentTime = 0;
-		break;
-
-	default:// Not supported behaviour
-		//if (DMXValue == channel.DMXChannelData.DefaultValue) this->SetValueNoInterp(0, 0); // To avoid stack overflows
-		//else this->ApplyEffectToBeam(channel.DMXChannelData.DefaultValue, channel, DMXBehaviour, AttributeType, physicalValue);
-		break;
+		default: break; // Not supported behaviour
 	}
 }
 

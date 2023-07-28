@@ -51,7 +51,7 @@ public:
 	UCPGDTFCIEColorSourceFixtureComponent();
 
 	/// The array is present for future support of more complex LED engines
-	virtual bool Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables, int attributeIndex) override;
+	virtual bool Setup(TArray<FDMXImportGDTFDMXChannel> InputsAvailables, int attributeIndex) override;
 
 	  /*******************************************/
 	 /*               DMX Related               */

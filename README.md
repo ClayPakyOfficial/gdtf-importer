@@ -5,14 +5,13 @@
 <h1 align="center" style="color: white !important;">Unreal GDTFImporter by Clay Paky</h1></div>
 <h2><em><strong>WARNING :</strong></em> This plugin is still under development.
 </h2>
-<h2><em><strong>IMPORTANT :</strong></em> In case of fixture(s) inacurate behaviour before looking for a bug please start by checking the GDTF definition. A lot of them are bad formatted or provide values who doesn't fit the real behavior.
+<h2><em><strong>IMPORTANT :</strong></em> In case of fixture(s) inaccurate behaviour, before looking for a bug, please start by checking the GDTF definition. A lot of them are bad formatted or provide values who doesn't fit the real behavior.
 </h2>
 
 
 ## TODO
 
 - Do the TODOs
-
 - Improve documentation
 - Fix Lens texture not centered
 - Check the accuracy of rotation matrix parsing in ``FCPGDTFImporterUtils``
@@ -33,7 +32,6 @@ Add a option in the interface to ask the DMXLibrary to use and create the Fixtur
 
 Solvable
 - Channels modifiying the behaviour of other channels is not supported
-- No support of infinite Pan/Tilt
 
 Permanent
 - Bad GDTF Files (Some stuff can be worked around)
@@ -50,8 +48,10 @@ Permanent
 1. If your project is open in Unreal close it.
 2. Create a ``Plugins`` folder in your project folder.
 3. Extract the plugin.
-4. Launch the project in Unreal.
-5. To confirm that the plug-in has been successfully installed and enabled, during a GDTF import the option windows should specify if this is the Clay Paky GDTF Importer.
+4. Apply the `dmxEngine.patch` file to the Unreal Engine's codebase using the command `git apply dmxEngine.patch`.
+5. Recompile Unreal Engine.
+6. Launch the project in Unreal.
+7. To confirm that the plug-in has been successfully installed and enabled, during a GDTF import the option windows should specify if this is the Clay Paky GDTF Importer.
 
 ![Clay Paky GDTF import option window](Resources/ImportWindow.png)
 

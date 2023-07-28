@@ -32,9 +32,9 @@ UCPGDTFHSVColorSourceFixtureComponent::UCPGDTFHSVColorSourceFixtureComponent() {
 	this->bUseInterpolation = false; // No interpolation here
 };
 
-bool UCPGDTFHSVColorSourceFixtureComponent::Setup(FName AttachedGeometryNamee, TArray<FDMXImportGDTFDMXChannel> InputsAvailables, int attributeIndex) {
+bool UCPGDTFHSVColorSourceFixtureComponent::Setup(TArray<FDMXImportGDTFDMXChannel> InputsAvailables, int attributeIndex) {
 
-	Super::Setup(AttachedGeometryNamee, InputsAvailables, attributeIndex);
+	Super::Setup(InputsAvailables, attributeIndex);
 	
 	for (FDMXImportGDTFDMXChannel Channel : InputsAvailables) {
 		

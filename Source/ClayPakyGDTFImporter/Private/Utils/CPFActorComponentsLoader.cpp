@@ -40,7 +40,7 @@ SOFTWARE.
 #include "Components/DMXComponents/MultipleAttributes/CPGDTFGoboWheelFixtureComponent.h"
 #include "Components/DMXComponents/MultipleAttributes/CPGDTFShutterFixtureComponent.h"
 #include "Components/DMXComponents/MultipleAttributes/CPGDTFFrostFixtureComponent.h"
-#include "Components/DMXComponents/SimpleAttribute/CPGDTFMovementFixtureComponent.h"
+#include "Components/DMXComponents/MultipleAttributes/CPGDTFMovementFixtureComponent.h"
 #include "Components/DMXComponents/SimpleAttribute/CPGDTFDimmerFixtureComponent.h"
 #include "Components/DMXComponents/SimpleAttribute/CPGDTFZoomFixtureComponent.h"
 
@@ -134,7 +134,7 @@ void FCPFActorComponentsLoader::LoadSimpleAttributeComponents_INTERNAL(ACPGDTFFi
 
 		case ECPGDTFAttributeType::Pan:
 		case ECPGDTFAttributeType::Tilt:
-			ComponentClass = UCPGDTFMovementFixtureComponent::StaticClass();
+			//ComponentClass = UCPGDTFMovementFixtureComponent::StaticClass();
 			break;
 		case ECPGDTFAttributeType::Dimmer:
 			ComponentClass = UCPGDTFDimmerFixtureComponent::StaticClass();
@@ -200,7 +200,8 @@ bool FCPFActorComponentsLoader::LoadMultipleAttributesComponents_INTERNAL(ACPGDT
 		{UCPGDTFGoboWheelFixtureComponent::StaticClass(), "^Gobo{0}.*(?<!Mode){1}$"},
 		{UCPGDTFFrostFixtureComponent::StaticClass(), "^Frost{0}.*(?<!MSpeed){1}$"},
 		{UCPGDTFShutterFixtureComponent::StaticClass(), "^(Shutter{0}.*{1})|(StrobeMode.+{1})|(StrobeFrequency{1})$"},
-		{UCPGDTFShaperFixtureComponent::StaticClass(), "^(Blade(?:Soft)*{0}(?:A|B|Rot){1})|(Shaper(?:Rot|Macros|MacrosSpeed){1})$"}
+		{UCPGDTFShaperFixtureComponent::StaticClass(), "^(Blade(?:Soft)*{0}(?:A|B|Rot){1})|(Shaper(?:Rot|Macros|MacrosSpeed){1})$"},
+		{UCPGDTFMovementFixtureComponent::StaticClass(), "^(?:Pan|Tilt)(?:Rotate)*{1}$"}
 	};
 
 	//Copy the channels adding an index to differentiate between channels with same name
@@ -219,7 +220,7 @@ bool FCPFActorComponentsLoader::LoadMultipleAttributesComponents_INTERNAL(ACPGDT
 				cnt = *count + 1;
 			counters.Add(name, cnt);
 
-			lCopy.Attribute.Name = FName(name + FString::FromInt(cnt));
+			lCopy.Attribute.Name = FName(name + TEXT("_") + FString::FromInt(cnt));
 			chCopy.LogicalChannels.Add(lCopy);
 		}
 		lclChannels.Add(chCopy);
@@ -235,7 +236,7 @@ bool FCPFActorComponentsLoader::LoadMultipleAttributesComponents_INTERNAL(ACPGDT
 
 		while (true) { // We loop because we can find multiple time the same type. For example GoboWheels or multiple RGB... channels.
 
-			DMXChannelsIdxExtracted = FindDMXChannelsIdxByAttributeTypePattern(FString::Format(*(ComponentDefinition.Value), {AttributeIndex, SetIndex}), lclChannels);
+			DMXChannelsIdxExtracted = FindDMXChannelsIdxByAttributeTypePattern(FString::Format(*(ComponentDefinition.Value), {AttributeIndex, TEXT("_") + FString::FromInt(SetIndex)}), lclChannels);
 			if (DMXChannelsIdxExtracted.Num() < 1) break; // We quit the loop
 			//If the two sets are identical, we have obtained the same DMXChannelsExtracted array, so we try obtaining a different set with the same channel names
 			if (DMXChannelsIdxExtracted.Difference(DMXChannelsExtractedPrev).IsEmpty() && DMXChannelsExtractedPrev.Difference(DMXChannelsIdxExtracted).IsEmpty()) {
@@ -250,12 +251,11 @@ bool FCPFActorComponentsLoader::LoadMultipleAttributesComponents_INTERNAL(ACPGDT
 
 			FString ComponentName = DMXChannelsExtracted[0].Geometry.ToString();
 			ComponentName.Append("_");
-			for (FDMXImportGDTFDMXChannel chan : DMXChannelsExtracted) {
+			for (FDMXImportGDTFDMXChannel chan : DMXChannelsExtracted)
 				ComponentName.Append(chan.LogicalChannels[0].Attribute.Pretty);
-			}
 
 			UCPGDTFMultipleAttributeFixtureComponent* NewComponent = NewObject<UCPGDTFMultipleAttributeFixtureComponent>(Actor, ComponentDefinition.Key, FName(ComponentName));
-			bool setupSuccessfull = NewComponent->Setup(DMXChannelsExtracted[0].Geometry, DMXChannelsExtracted, AttributeIndex - 1);
+			bool setupSuccessfull = NewComponent->Setup(DMXChannelsExtracted, AttributeIndex - 1);
 			if (setupSuccessfull) {
 				NewComponent->OnComponentCreated();
 				Actor->AddInstanceComponent(NewComponent);
@@ -281,7 +281,7 @@ bool FCPFActorComponentsLoader::LoadMultipleAttributesComponents_INTERNAL(ACPGDT
 TSet<int> FCPFActorComponentsLoader::FindDMXChannelsIdxByAttributeTypePattern(FString AttributeNamePattern, TArray<FDMXImportGDTFDMXChannel> &DMXChannels) {
 	
 	TSet<int> returnSet;
-	FName CurrentGeometry = "";
+	//FName CurrentGeometry = "";
 	FRegexPattern Pattern = FRegexPattern(AttributeNamePattern);
 
 	for (int i = 0; i < DMXChannels.Num(); i++) {
@@ -294,10 +294,12 @@ TSet<int> FCPFActorComponentsLoader::FindDMXChannelsIdxByAttributeTypePattern(FS
 			
 			FRegexMatcher RegexMatcher = FRegexMatcher(Pattern, DMXChannelCopy.LogicalChannels[j].Attribute.Name.ToString());
 			if (RegexMatcher.FindNext()) { // If the Attribute Name of the Channel match with the pattern
-				if (CurrentGeometry.IsEqual(FName(""), ENameCase::CaseSensitive)) CurrentGeometry = DMXChannel.Geometry;
-				if (DMXChannel.Geometry.IsEqual(CurrentGeometry, ENameCase::CaseSensitive)) {
-					mustAdd = true;
-				} else deleteLogical = true;
+				//if (CurrentGeometry.IsEqual(FName(""), ENameCase::CaseSensitive)) CurrentGeometry = DMXChannel.Geometry;
+				//if (DMXChannel.Geometry.IsEqual(CurrentGeometry, ENameCase::CaseSensitive)) {
+				mustAdd = true;
+				//} else {
+				//	deleteLogical = true;
+				//}
 			} else deleteLogical = true;
 
 			if (deleteLogical) {

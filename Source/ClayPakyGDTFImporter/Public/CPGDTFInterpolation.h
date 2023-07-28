@@ -295,8 +295,16 @@ public:
 	/// Set current value without any interpolation
 	inline void SetValueNoInterp(float NewValue) {
 		aquireLock();
-		__setTargetValue_noLocks(NewValue);
+		__setTargetValue_noLocks(NewValue, false);
 		__EndInterpolation_noLocks(true);
+		releaseLock();
+	}
+
+	// Moves both CurrentValue and TargetValue by the same offset, without stopping the interpolation
+	inline void offset(float offset) {
+		aquireLock();
+		__setTargetValue_noLocks(TargetValue + offset, false);
+		CurrentValue += offset;
 		releaseLock();
 	}
 
@@ -348,7 +356,7 @@ public:
 		return acceleration;
 	}
 	//Sets the target value. If it hasn't been set yet, we snap directly to it. If we're moving by just a little bit, we slow down our max normalized speed to get a smooth fade
-	void __setTargetValue_noLocks(float value);
+	void __setTargetValue_noLocks(float value, bool checkSpeedCap = true);
 	inline void setTargetValue(float value) {
 		aquireLock();
 		__setTargetValue_noLocks(value);

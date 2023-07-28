@@ -45,26 +45,34 @@ protected:
 
 	EPulseEffectType PulseEffect;
 
-	double CurrentTime;
-	double PeriodTime;
-	double DutyCycle;
+	float CurrentTime;
+	float PeriodTime;
+	float DutyCycle;
 
 	//Used to calc the new values in ChangePeriod
 
 	/**
 	 * This defines the fraction of one period in which the pulse is on.
 	 */
-	double DutyCyclePercent;
+	float DutyCyclePercent;
 
 	/**
 	 * This defines the offset of the end of the pulse from the start as percentage of the total period.
 	 */
-	double TimeOffsetPercent;
+	float TimeOffsetPercent;
+
+	//True if the last interpolation restarted the duty cycle
+	bool loopedBack;
+
+	float __CalcValue_internal(float Time);
 
 public:
 	FPulseEffectManager() { this->Reset(); }
 
 	void Reset() { this->SetSettings(EPulseEffectType::Pulse); }
+
+	//Returns true if the last interpolation restarted the duty cycle
+	FORCEINLINE bool hasLoopedBack() { return loopedBack; }
 
 	/**
 	 * Set the properties of the pulse effect
@@ -76,7 +84,7 @@ public:
 	 * @param _DutyCycle Percentage (value between [0;1])
 	 * @param TimeOffset Percentage (value between [0;1])
 	*/
-	void SetSettings(EPulseEffectType EffectType, double Period = 1, double _DutyCycle = 1, double TimeOffset = 1);
+	void SetSettings(EPulseEffectType EffectType, float Period = 1, float _DutyCycle = 1, float TimeOffset = 1);
 
 	/**
 	 * Change the Effect period
@@ -85,10 +93,10 @@ public:
 	 * 
 	 * @param Period in seconds
 	*/
-	void ChangePeriod(double Period = 1);
+	void ChangePeriod(float Period = 1);
 
-	double GetCurrentTime() { return this->CurrentTime; }
-	double GetPeriodTime()  { return this->PeriodTime; }
+	float GetCurrentTime() { return this->CurrentTime; }
+	float GetPeriodTime()  { return this->PeriodTime; }
 
 	/**
 	 * Calc the value for a given time
@@ -98,7 +106,15 @@ public:
 	 * @param Time 
 	 * @return Result
 	*/
-	double CalcValue(double Time);
+	FORCEINLINE float CalcValue(float Time) { return __CalcValue_internal(fmod(Time, PeriodTime)); }
 
-	double InterpolatePulse(double DeltaSeconds);
+	/**
+	 * Updates the pulse value with a specified amount of time.
+	 * @author Dorian Gardes, Luca Sorace - Clay Paky S.R.L.
+	 * @date 21 july 2022
+	 *
+	 * @param Time
+	 * @return Result expressed in the [0, 1] range
+	 */
+	float InterpolatePulse(float DeltaSeconds);
 };

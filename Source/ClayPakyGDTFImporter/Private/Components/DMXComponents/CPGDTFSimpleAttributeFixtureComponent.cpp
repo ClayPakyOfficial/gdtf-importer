@@ -33,7 +33,7 @@ TArray<TSet<ECPGDTFAttributeType>> UCPGDTFSimpleAttributeFixtureComponent::getAt
 bool UCPGDTFSimpleAttributeFixtureComponent::Setup(FDMXImportGDTFDMXChannel DMXChannell, int attributeIndex) {
 	TArray<FDMXImportGDTFDMXChannel> chs;
 	chs.Add(DMXChannell);
-	Super::Setup(DMXChannell.Geometry, chs, attributeIndex);
+	Super::Setup(chs, attributeIndex);
 	bIsRawDMXEnabled = true;
 	return true;
 }
